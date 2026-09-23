@@ -1,0 +1,21 @@
+services:
+  alloy:
+    image: grafana/alloy:v1.18.1
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --storage.path=/var/lib/alloy
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./generated.alloy:/etc/alloy/config.alloy:ro
+      - ${EDGE_LOG_DIR:-./logs}:/var/log/observed:ro
+      - alloy-data:/var/lib/alloy
+    restart: unless-stopped
+
+volumes:
+  alloy-data:
+
