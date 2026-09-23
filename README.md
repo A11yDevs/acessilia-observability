@@ -101,6 +101,45 @@ For a process running directly on the monitored host, a typical OTLP HTTP endpoi
 
 The AgentOS native `/metrics` API contains persisted Agno aggregates. It is not assumed to be a Prometheus exposition endpoint. Configure `metrics_target` only when the application exposes Prometheus format metrics.
 
+## Instrument an Agno application
+
+From this repository's checkout on the application host, install the optional telemetry dependencies in the **application's** Python environment:
+
+```sh
+pip install -e '.[telemetry]'
+```
+
+Call the setup function once at startup, before creating AgentOS or running agents. `collector_url` points to Alloy on the application host, not to the observability server:
+
+```python
+from agno_observability_kit.instrumentation.agno import configure_agno_telemetry
+
+telemetry = configure_agno_telemetry(
+    service_name="my-agentos",
+    project_id="my-project",
+    environment="production",
+    collector_url="http://127.0.0.1:4318",
+    loggers=("my_application",),
+)
+
+# Create the existing AgentOS app below this line. Keep its own persistence setup.
+```
+
+The helper exports Agno spans through OpenInference, attaches one OTLP logging handler to each named Python logger, and creates a meter. Record application-level run metrics where the caller has timing and status:
+
+```python
+import logging
+
+telemetry.record_run(component_type="agent", status="ok", duration_seconds=1.2)
+logger = logging.getLogger("my_application")
+logger.setLevel(logging.INFO)
+logger.info("run complete", extra={"run_id": "run-123", "session_id": "session-456"})
+```
+
+Use actual run and session IDs from the application. `run_id` and `session_id` belong in traces and logs, never in metric labels. Logs written while a span is active also carry its trace and span IDs. Call `telemetry.flush()` during a controlled shutdown if the process may exit before batched signals are sent. OTLP HTTP sends traces, metrics and logs to `/v1/traces`, `/v1/metrics` and `/v1/logs` on the collector.
+
+Agno tracing is process-wide. If `AgentOS(tracing=True)` or another tracer provider is already active, this helper raises an error instead of replacing it; configure an exporter on the existing provider and instrument Agno there. Set up one tracer provider before AgentOS starts. Traces can include prompts or responses, so review application data before enabling external export. See the [Agno tracing guide](https://docs.agno.com/tracing/overview) and [OpenTelemetry Python exporter guide](https://opentelemetry.io/docs/languages/python/exporters/).
+
 ## Optional Langfuse
 
 The application collector can send OTLP traces to Langfuse as well as Tempo. Use an existing Langfuse instance or start the self-hosted Compose services below. Langfuse API keys are created per project in its UI; the kit does not create them.

@@ -13,6 +13,14 @@ dependencies = [
   "uvicorn>=0.30,<1",
 ]
 
+[project.optional-dependencies]
+telemetry = [
+  "agno>=3",
+  "openinference-instrumentation-agno",
+  "opentelemetry-sdk",
+  "opentelemetry-exporter-otlp-proto-http",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["agno_observability_kit*"]
