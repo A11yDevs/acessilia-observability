@@ -17,6 +17,8 @@ class ConfigTests(unittest.TestCase):
             ProjectConfig(collector_bind_ip="public.example")
         with self.assertRaises(ValueError):
             ProjectConfig(langfuse_ui_port=0)
+        with self.assertRaises(ValueError):
+            ProjectConfig(grafana_ui_url="not-a-url")
 
 
 class AgnoTests(unittest.TestCase):

@@ -26,6 +26,7 @@ class ProjectConfig:
     langfuse_ui_port: int = 3001
     langfuse_media_port: int = 9092
     langfuse_media_url: str = "http://localhost:9092"
+    grafana_ui_url: str = "http://localhost:3000"
     metric_queries: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -40,6 +41,7 @@ class ProjectConfig:
             ("langfuse_otlp_url", self.langfuse_otlp_url),
             ("langfuse_ui_url", self.langfuse_ui_url),
             ("langfuse_media_url", self.langfuse_media_url),
+            ("grafana_ui_url", self.grafana_ui_url),
         ):
             if value and (urlparse(value).scheme not in {"http", "https"} or not urlparse(value).netloc):
                 raise ValueError(f"{label} must be an HTTP(S) URL")

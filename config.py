@@ -24,5 +24,6 @@ CONFIG = ProjectConfig(
     langfuse_ui_port=3001,
     langfuse_media_port=9092,
     langfuse_media_url="http://localhost:9092",
+    grafana_ui_url="http://localhost:3000",  # Browser URL; use a tunnel for remote viewing.
     metric_queries={},  # Optional named PromQL queries for this project.
 )
