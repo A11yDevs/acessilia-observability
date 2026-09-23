@@ -2,8 +2,7 @@
 .venv
 .env
 .runtime.env
-edge
+infra
 tests
 __pycache__
 *.egg-info
-

@@ -3,10 +3,6 @@ __pycache__/
 *.py[cod]
 .env
 .runtime.env
-edge/.runtime.env
-edge/generated.alloy
-edge/.env
-langfuse/.env
-loadtest/.runtime.env
+infra/edge/generated.alloy
 .pytest_cache/
 *.egg-info/

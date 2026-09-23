@@ -92,14 +92,16 @@ def render_alloy(config: ProjectConfig) -> str:
 
 
 def write_config(config: ProjectConfig = CONFIG, root: Path = ROOT) -> None:
-    edge = root / "edge"
-    edge.mkdir(exist_ok=True)
-    loadtest = root / "loadtest"
-    loadtest.mkdir(exist_ok=True)
+    hub_dir = root / "infra/hub"
+    hub_dir.mkdir(parents=True, exist_ok=True)
+    edge = root / "infra/edge"
+    edge.mkdir(parents=True, exist_ok=True)
+    loadtest = root / "infra/loadtest"
+    loadtest.mkdir(parents=True, exist_ok=True)
     log_dir = Path(config.edge_log_dir) if config.edge_log_dir else edge / "logs"
     if not config.edge_log_dir:
         log_dir.mkdir(exist_ok=True)
-    (root / ".runtime.env").write_text(
+    (hub_dir / ".runtime.env").write_text(
         f"HUB_BIND_IP={config.hub_bind_ip}\n"
         f"LANGFUSE_BIND_IP={config.langfuse_bind_ip}\n"
         f"LANGFUSE_UI_PORT={config.langfuse_ui_port}\n"

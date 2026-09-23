@@ -1,3 +1,5 @@
+name: agno-observability-kit-edge
+
 services:
   alloy:
     image: grafana/alloy:v1.18.1

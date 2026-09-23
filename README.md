@@ -4,6 +4,8 @@ A standalone, read-only observability hub for an Agno AgentOS application. The h
 
 The kit monitors one project per installation. It does not import application code or require a shared Docker network or filesystem between the hub and AgentOS.
 
+`src/agno_observability_kit` contains configuration and service integrations. `frontend/` contains the panel and its assets. `infra/` groups the hub, edge collector, optional Langfuse services and load test deployment. Project settings stay in the root `config.py`.
+
 ## Requirements
 
 - Python 3.11 or newer to generate runtime configuration.
@@ -38,19 +40,19 @@ After editing `config.py`, regenerate the local runtime files:
 .venv/bin/python -m agno_observability_kit.configure
 ```
 
-This writes ignored `.runtime.env`, `edge/.runtime.env`, `edge/generated.alloy` and `loadtest/.runtime.env`. Regenerate them on each machine after copying or editing `config.py`.
+This writes ignored `infra/hub/.runtime.env`, `infra/edge/.runtime.env`, `infra/edge/generated.alloy` and `infra/loadtest/.runtime.env`. Regenerate them on each machine after copying or editing `config.py`.
 
 ## Start the hub
 
 On the hub machine:
 
 ```sh
-docker compose --env-file .env --env-file .runtime.env up -d --build
+docker compose -f infra/hub/compose.yaml --env-file .env --env-file infra/hub/.runtime.env up -d --build
 ```
 
 Open the panel at `http://localhost:8010` and Grafana at `http://localhost:3000`. The panel and Grafana listen on loopback. Prometheus, Loki and the Tempo OTLP receiver bind to `hub_bind_ip`; keep that address inside a private network and restrict access to the monitored hosts.
 
-After changing `config.py`, rerun `.venv/bin/python -m agno_observability_kit.configure` and rebuild the panel with `docker compose --env-file .env --env-file .runtime.env up -d --build panel`.
+After changing `config.py`, rerun `.venv/bin/python -m agno_observability_kit.configure` and rebuild the panel with `docker compose -f infra/hub/compose.yaml --env-file .env --env-file infra/hub/.runtime.env up -d --build panel`.
 
 ## Start the edge collector
 
@@ -58,7 +60,7 @@ On the monitored host, copy this repository with the edited `config.py`, then ru
 
 ```sh
 .venv/bin/python -m agno_observability_kit.configure
-docker compose -f edge/compose.yaml --env-file edge/.runtime.env up -d
+docker compose -f infra/edge/compose.yaml --env-file infra/edge/.runtime.env up -d
 ```
 
 The edge collector listens for OTLP on local ports `4317` and `4318`. By default these ports bind only to `127.0.0.1`. When an application container must reach Alloy through another private host interface, set `edge_bind_ip` to that interface's IPv4 address and regenerate the files. Do not bind ingestion ports to a public interface.
@@ -80,26 +82,26 @@ The AgentOS native `/metrics` API contains persisted Agno aggregates. It is not 
 
 The edge can send OTLP traces to Langfuse as well as Tempo. Use an existing Langfuse instance or start the self-hosted Compose services below. Langfuse API keys are created per project in its UI; the kit does not create them.
 
-To start Langfuse on the hub, first fill the secrets in `langfuse/.env`. Use long random values and a 64-character hex `LANGFUSE_ENCRYPTION_KEY` (`openssl rand -hex 32`). Keep database passwords URL-safe.
+To start Langfuse on the hub, first fill the secrets in `infra/langfuse/.env`. Use long random values and a 64-character hex `LANGFUSE_ENCRYPTION_KEY` (`openssl rand -hex 32`). Keep database passwords URL-safe.
 
 ```sh
-cp langfuse/.env.example langfuse/.env
-docker compose -f compose.yaml -f langfuse/compose.yaml \
-  --env-file .env --env-file langfuse/.env --env-file .runtime.env \
+cp infra/langfuse/.env.example infra/langfuse/.env
+docker compose -f infra/hub/compose.yaml -f infra/langfuse/compose.yaml \
+  --env-file .env --env-file infra/langfuse/.env --env-file infra/hub/.runtime.env \
   up -d langfuse-web langfuse-worker
 ```
 
-By default, the UI is at `http://localhost:3001` and the media endpoint is at `http://localhost:9092`. If the edge runs on another machine, set `langfuse_bind_ip` to a private address on the hub and set `langfuse_ui_url` and `langfuse_media_url` to URLs using that address. Regenerate `.runtime.env` before starting the services. Allow access to the UI from the edge only through a trusted private network. Langfuse's Docker Compose setup needs substantial memory and persistent storage; see its [deployment guide](https://langfuse.com/self-hosting/deployment/docker-compose).
+By default, the UI is at `http://localhost:3001` and the media endpoint is at `http://localhost:9092`. If the edge runs on another machine, set `langfuse_bind_ip` to a private address on the hub and set `langfuse_ui_url` and `langfuse_media_url` to URLs using that address. Regenerate `infra/hub/.runtime.env` before starting the services. Allow access to the UI from the edge only through a trusted private network. Langfuse's Docker Compose setup needs substantial memory and persistent storage; see its [deployment guide](https://langfuse.com/self-hosting/deployment/docker-compose).
 
 Create a Langfuse project and its API keys in the UI. Then set `langfuse_otlp_url` in `config.py` to the URL reachable **from edge Alloy**, ending in `/api/public/otel`, for example `http://100.64.0.10:3001/api/public/otel`. Set `langfuse_ui_url` to the browser URL to show its link in the panel. For Langfuse Cloud, use the base URL for the chosen data region followed by `/api/public/otel`.
 
-On the monitored host, put the project keys in `edge/.env`, regenerate the Alloy configuration, and restart the edge container:
+On the monitored host, put the project keys in `infra/edge/.env`, regenerate the Alloy configuration, and restart the edge container:
 
 ```sh
-cp edge/.env.example edge/.env
-# Fill LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY in edge/.env.
+cp infra/edge/.env.example infra/edge/.env
+# Fill LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY in infra/edge/.env.
 .venv/bin/python -m agno_observability_kit.configure
-docker compose -f edge/compose.yaml --env-file edge/.runtime.env up -d --force-recreate
+docker compose -f infra/edge/compose.yaml --env-file infra/edge/.runtime.env up -d --force-recreate
 ```
 
 The credentials stay outside `config.py` and are sent as HTTP Basic authentication to Langfuse. The [Langfuse OTLP endpoint](https://langfuse.com/docs/observability/get-started) accepts traces; metrics and logs continue to Prometheus and Loki.
@@ -109,7 +111,7 @@ The credentials stay outside `config.py` and are sent as HTTP Basic authenticati
 The load scenario is isolated from the hub and only calls the AgentOS listing endpoints. It does not run agents or spend model tokens. Start it explicitly on a machine that can reach AgentOS:
 
 ```sh
-docker compose -f loadtest/compose.yaml --env-file .env --env-file loadtest/.runtime.env up -d
+docker compose -f infra/loadtest/compose.yaml --env-file .env --env-file infra/loadtest/.runtime.env up -d
 ```
 
 Locust is then available at `http://localhost:8089`. Use a separate test environment or an approved load window before creating users in its UI.
@@ -118,9 +120,9 @@ Locust is then available at `http://localhost:8089`. Use a separate test environ
 
 ```sh
 .venv/bin/python -m unittest discover -s tests -v
-docker compose --env-file .env --env-file .runtime.env config --quiet
-docker compose -f edge/compose.yaml --env-file edge/.runtime.env config --quiet
-docker compose -f compose.yaml -f langfuse/compose.yaml --env-file .env --env-file langfuse/.env --env-file .runtime.env config --quiet
+docker compose -f infra/hub/compose.yaml --env-file .env --env-file infra/hub/.runtime.env config --quiet
+docker compose -f infra/edge/compose.yaml --env-file infra/edge/.runtime.env config --quiet
+docker compose -f infra/hub/compose.yaml -f infra/langfuse/compose.yaml --env-file .env --env-file infra/langfuse/.env --env-file infra/hub/.runtime.env config --quiet
 ```
 
 The panel uses only AgentOS read endpoints. Grafana's data sources are provisioned, while project-specific dashboards can be added without changing the panel.

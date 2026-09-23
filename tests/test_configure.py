@@ -28,12 +28,12 @@ class ConfigureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             write_config(config, root)
-            self.assertIn("HUB_BIND_IP=127.0.0.1", (root / ".runtime.env").read_text())
-            self.assertIn("LANGFUSE_UI_PORT=3001", (root / ".runtime.env").read_text())
-            self.assertIn('LANGFUSE_MEDIA_URL="http://localhost:9092"', (root / ".runtime.env").read_text())
-            self.assertIn("EDGE_BIND_IP=127.0.0.1", (root / "edge/.runtime.env").read_text())
-            self.assertEqual((root / "edge/generated.alloy").read_text(), text)
-            self.assertEqual((root / "loadtest/.runtime.env").read_text(), 'LOCUST_TARGET_URL=""\n')
+            self.assertIn("HUB_BIND_IP=127.0.0.1", (root / "infra/hub/.runtime.env").read_text())
+            self.assertIn("LANGFUSE_UI_PORT=3001", (root / "infra/hub/.runtime.env").read_text())
+            self.assertIn('LANGFUSE_MEDIA_URL="http://localhost:9092"', (root / "infra/hub/.runtime.env").read_text())
+            self.assertIn("EDGE_BIND_IP=127.0.0.1", (root / "infra/edge/.runtime.env").read_text())
+            self.assertEqual((root / "infra/edge/generated.alloy").read_text(), text)
+            self.assertEqual((root / "infra/loadtest/.runtime.env").read_text(), 'LOCUST_TARGET_URL=""\n')
 
     def test_langfuse_fanout_uses_runtime_credentials(self):
         config = ProjectConfig(langfuse_otlp_url="https://trace.example/api/public/otel")
