@@ -11,6 +11,13 @@ The kit monitors one project per installation. It does not import application co
 - Network access from the hub to AgentOS. For remote ingestion, use a private network address reachable from the monitored host.
 - An AgentOS instance exposing the Agno 3.x API. Persisted sessions require AgentOS database storage.
 
+Install the Python package in a local environment before generating configuration:
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -e .
+```
+
 ## Configure the project
 
 Edit [`config.py`](config.py). Set `project_id`, `project_name`, `environment` and `agentos_url`. The URL must be reachable **from inside the panel container**; `localhost` inside that container is not the monitored host. The panel uses `/info` and `/config` when available, then falls back to `/agents`, `/teams` and `/workflows`.
@@ -28,7 +35,7 @@ Set `GRAFANA_ADMIN_PASSWORD` in `.env`. Set `AGENTOS_TOKEN` there when AgentOS r
 After editing `config.py`, regenerate the local runtime files:
 
 ```sh
-python3 -m kit.configure
+.venv/bin/python -m agno_observability_kit.configure
 ```
 
 This writes ignored `.runtime.env`, `edge/.runtime.env`, `edge/generated.alloy` and `loadtest/.runtime.env`. Regenerate them on each machine after copying or editing `config.py`.
@@ -43,14 +50,14 @@ docker compose --env-file .env --env-file .runtime.env up -d --build
 
 Open the panel at `http://localhost:8010` and Grafana at `http://localhost:3000`. The panel and Grafana listen on loopback. Prometheus, Loki and the Tempo OTLP receiver bind to `hub_bind_ip`; keep that address inside a private network and restrict access to the monitored hosts.
 
-After changing `config.py`, rerun `python3 -m kit.configure` and rebuild the panel with `docker compose --env-file .env --env-file .runtime.env up -d --build panel`.
+After changing `config.py`, rerun `.venv/bin/python -m agno_observability_kit.configure` and rebuild the panel with `docker compose --env-file .env --env-file .runtime.env up -d --build panel`.
 
 ## Start the edge collector
 
 On the monitored host, copy this repository with the edited `config.py`, then run:
 
 ```sh
-python3 -m kit.configure
+.venv/bin/python -m agno_observability_kit.configure
 docker compose -f edge/compose.yaml --env-file edge/.runtime.env up -d
 ```
 
@@ -91,7 +98,7 @@ On the monitored host, put the project keys in `edge/.env`, regenerate the Alloy
 ```sh
 cp edge/.env.example edge/.env
 # Fill LANGFUSE_PUBLIC_KEY and LANGFUSE_SECRET_KEY in edge/.env.
-python3 -m kit.configure
+.venv/bin/python -m agno_observability_kit.configure
 docker compose -f edge/compose.yaml --env-file edge/.runtime.env up -d --force-recreate
 ```
 
@@ -110,8 +117,6 @@ Locust is then available at `http://localhost:8089`. Use a separate test environ
 ## Development checks
 
 ```sh
-python3 -m venv .venv
-.venv/bin/pip install -e .
 .venv/bin/python -m unittest discover -s tests -v
 docker compose --env-file .env --env-file .runtime.env config --quiet
 docker compose -f edge/compose.yaml --env-file edge/.runtime.env config --quiet

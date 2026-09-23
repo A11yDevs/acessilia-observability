@@ -1,6 +1,8 @@
 services:
   panel:
-    build: .
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     ports:
       - "127.0.0.1:8010:8010"
     environment:
@@ -64,4 +66,3 @@ volumes:
   loki-data:
   tempo-data:
   grafana-data:
-

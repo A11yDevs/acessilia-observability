@@ -3,8 +3,8 @@ import unittest
 
 import httpx
 
-from kit.panel import create_app
-from kit.settings import ProjectConfig
+from frontend.app import create_app
+from agno_observability_kit.settings import ProjectConfig
 
 
 class PanelTests(unittest.TestCase):

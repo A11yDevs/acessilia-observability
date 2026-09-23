@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 
 from config import CONFIG
-from kit.settings import ProjectConfig
+from agno_observability_kit.settings import ProjectConfig
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _quoted(value: str) -> str:

@@ -9,10 +9,10 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import CONFIG
-from kit.agno import AgnoClient, UpstreamError
-from kit.logs import recent_logs
-from kit.metrics import query_metrics
-from kit.settings import ProjectConfig
+from agno_observability_kit.integrations.agno import AgnoClient, UpstreamError
+from agno_observability_kit.integrations.loki import recent_logs
+from agno_observability_kit.integrations.prometheus import query_metrics
+from agno_observability_kit.settings import ProjectConfig
 
 
 STATIC = Path(__file__).parent / "static"

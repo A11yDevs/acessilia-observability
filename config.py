@@ -1,9 +1,9 @@
 """Edit this file to point the kit at one AgentOS project.
 
-Credentials belong in .env, not here. Run `python -m kit.configure` after edits.
+Credentials belong in .env, not here. Run `python -m agno_observability_kit.configure` after edits.
 """
 
-from kit.settings import ProjectConfig
+from agno_observability_kit.settings import ProjectConfig
 
 
 CONFIG = ProjectConfig(

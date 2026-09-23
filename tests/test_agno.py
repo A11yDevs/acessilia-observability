@@ -3,8 +3,8 @@ import unittest
 
 import httpx
 
-from kit.agno import AgnoClient, UpstreamError
-from kit.settings import ProjectConfig
+from agno_observability_kit.integrations.agno import AgnoClient, UpstreamError
+from agno_observability_kit.settings import ProjectConfig
 
 
 class ConfigTests(unittest.TestCase):

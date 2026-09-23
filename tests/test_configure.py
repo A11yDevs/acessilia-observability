@@ -2,8 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from kit.configure import render_alloy, write_config
-from kit.settings import ProjectConfig
+from agno_observability_kit.configure import render_alloy, write_config
+from agno_observability_kit.settings import ProjectConfig
 
 
 class ConfigureTests(unittest.TestCase):
