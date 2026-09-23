@@ -43,6 +43,41 @@ Use this checklist when an Agno application is available. The AgentOS API and th
 
 An API connection supplies the component list. Sessions and runs require persistence in AgentOS. Metrics, logs and traces require the application to emit those signals to the collector; pointing `agentos_url` at the API does not export them. The planned application instrumentation and remote deployment work is tracked in [the implementation plan](docs/implementation-plan.md). Agno's current [API guide](https://docs.agno.com/agent-os/using-the-api) describes `/info` and `/config`; applications using a restricted public AgentOS surface may hide these administrative routes.
 
+### Check a remote installation
+
+After starting both Compose stacks, run the server check **inside the panel container** so it tests the same route and bearer credential as the panel:
+
+```sh
+docker compose -f infra/observability-server/compose.yaml --env-file .env --env-file infra/observability-server/.runtime.env exec -T panel python -m agno_observability_kit.check_connection server
+```
+
+On the application host, run the collector and ingestion reachability check from the kit checkout:
+
+```sh
+.venv/bin/python -m agno_observability_kit.check_connection application
+```
+
+The second command checks TCP reachability and, when Langfuse is enabled, whether both keys are set. It does not send a telemetry payload or verify backend authentication. The server check calls AgentOS `/info` and component discovery. A failed check names the missing URL, rejected AgentOS credential, DNS problem or unreachable port.
+
+Keep ports `8010` (panel) and `3000` (Grafana) on the observability server's loopback address. From another computer, open them through SSH:
+
+```sh
+ssh -L 8010:127.0.0.1:8010 -L 3000:127.0.0.1:3000 user@observability-server
+```
+
+Then use `http://127.0.0.1:8010` and `http://127.0.0.1:3000` in that computer's browser. SSH provides the remote access control. If the panel must be published directly, put an authenticated HTTPS reverse proxy in front of it before changing the loopback bind.
+
+Allow only these private-network connections in the host firewalls or network ACLs:
+
+| Source | Destination | TCP ports | Purpose |
+| --- | --- | --- | --- |
+| Observability server | Application host | AgentOS port, usually `7777` | Read AgentOS metadata, sessions and runs |
+| Application host | Observability server | `9090`, `3100`, `4318` | Send metrics, logs and traces |
+| Application process or container | Alloy on application host | `4318` or `4317` | Send OTLP signals locally |
+| Application host, if Langfuse is enabled | Langfuse endpoint | Endpoint port, usually `3001` or `443` | Send a copy of traces |
+
+Bind the server ingestion ports to `observability_bind_ip`, a private interface address. Restrict the AgentOS administrative API to the observability server. Keep `.env` files on their respective machines; do not copy secrets into `config.py`.
+
 ## Configure the project
 
 Edit [`config.py`](config.py). Set `project_id`, `project_name`, `environment` and `agentos_url`. The URL must be reachable **from inside the panel container**; `localhost` inside that container is not the monitored host. The panel uses `/info` and `/config` when available, then falls back to `/agents`, `/teams` and `/workflows`.
