@@ -1,0 +1,126 @@
+x-langfuse-env: &langfuse-env
+  NEXTAUTH_URL: ${LANGFUSE_UI_URL:?Generate .runtime.env from config.py}
+  DATABASE_URL: postgresql://postgres:${LANGFUSE_POSTGRES_PASSWORD:?Set Langfuse secrets}@langfuse-postgres:5432/postgres
+  SALT: ${LANGFUSE_SALT:?Set Langfuse secrets}
+  ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?Set Langfuse secrets}
+  NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?Set Langfuse secrets}
+  TELEMETRY_ENABLED: "false"
+  CLICKHOUSE_MIGRATION_URL: clickhouse://langfuse-clickhouse:9000
+  CLICKHOUSE_URL: http://langfuse-clickhouse:8123
+  CLICKHOUSE_USER: clickhouse
+  CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:?Set Langfuse secrets}
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:?Set Langfuse secrets}
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+  LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: minio
+  LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_MINIO_PASSWORD:?Set Langfuse secrets}
+  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://langfuse-minio:9000
+  LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+  REDIS_HOST: langfuse-redis
+  REDIS_PORT: "6379"
+  REDIS_AUTH: ${LANGFUSE_REDIS_PASSWORD:?Set Langfuse secrets}
+
+x-langfuse-depends-on: &langfuse-depends-on
+  langfuse-postgres:
+    condition: service_healthy
+  langfuse-clickhouse:
+    condition: service_healthy
+  langfuse-redis:
+    condition: service_healthy
+  langfuse-minio:
+    condition: service_healthy
+
+services:
+  langfuse-web:
+    image: docker.langfuse.com/langfuse/langfuse:4
+    ports:
+      - "${LANGFUSE_BIND_IP:-127.0.0.1}:${LANGFUSE_UI_PORT:-3001}:3000"
+    environment:
+      <<: *langfuse-env
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: ${LANGFUSE_MEDIA_URL:?Generate .runtime.env from config.py}
+      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://langfuse-minio:9000
+    depends_on: *langfuse-depends-on
+    restart: unless-stopped
+
+  langfuse-worker:
+    image: docker.langfuse.com/langfuse/langfuse-worker:4
+    environment:
+      <<: *langfuse-env
+    depends_on: *langfuse-depends-on
+    restart: unless-stopped
+
+  langfuse-postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${LANGFUSE_POSTGRES_PASSWORD:?Set Langfuse secrets}
+      POSTGRES_DB: postgres
+    volumes:
+      - langfuse-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  langfuse-clickhouse:
+    image: clickhouse/clickhouse-server:25.12
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: ${LANGFUSE_CLICKHOUSE_PASSWORD:?Set Langfuse secrets}
+    volumes:
+      - langfuse-clickhouse-data:/var/lib/clickhouse
+      - langfuse-clickhouse-logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  langfuse-redis:
+    image: redis:7
+    command: ["redis-server", "--requirepass", "${LANGFUSE_REDIS_PASSWORD:?Set Langfuse secrets}", "--maxmemory-policy", "noeviction"]
+    environment:
+      REDIS_PASSWORD: ${LANGFUSE_REDIS_PASSWORD:?Set Langfuse secrets}
+    volumes:
+      - langfuse-redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  langfuse-minio:
+    image: cgr.dev/chainguard/minio
+    entrypoint: sh
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: ${LANGFUSE_MINIO_PASSWORD:?Set Langfuse secrets}
+    ports:
+      - "${LANGFUSE_BIND_IP:-127.0.0.1}:${LANGFUSE_MEDIA_PORT:-9092}:9000"
+    volumes:
+      - langfuse-minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  langfuse-postgres-data:
+  langfuse-clickhouse-data:
+  langfuse-clickhouse-logs:
+  langfuse-redis-data:
+  langfuse-minio-data:

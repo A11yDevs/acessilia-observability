@@ -22,6 +22,10 @@ class ProjectConfig:
     edge_log_glob: str = "*.log"
     langfuse_otlp_url: str = ""
     langfuse_ui_url: str = ""
+    langfuse_bind_ip: str = "127.0.0.1"
+    langfuse_ui_port: int = 3001
+    langfuse_media_port: int = 9092
+    langfuse_media_url: str = "http://localhost:9092"
     metric_queries: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -35,16 +39,24 @@ class ProjectConfig:
             ("hub_ingest_url", self.hub_ingest_url),
             ("langfuse_otlp_url", self.langfuse_otlp_url),
             ("langfuse_ui_url", self.langfuse_ui_url),
+            ("langfuse_media_url", self.langfuse_media_url),
         ):
             if value and (urlparse(value).scheme not in {"http", "https"} or not urlparse(value).netloc):
                 raise ValueError(f"{label} must be an HTTP(S) URL")
             if value and (urlparse(value).username or urlparse(value).password):
                 raise ValueError(f"{label} cannot contain credentials")
-        for label, value in (("hub_bind_ip", self.hub_bind_ip), ("edge_bind_ip", self.edge_bind_ip)):
+        for label, value in (
+            ("hub_bind_ip", self.hub_bind_ip),
+            ("edge_bind_ip", self.edge_bind_ip),
+            ("langfuse_bind_ip", self.langfuse_bind_ip),
+        ):
             try:
                 ipaddress.IPv4Address(value)
             except ValueError as exc:
                 raise ValueError(f"{label} must be an IPv4 address") from exc
+        for label, value in (("langfuse_ui_port", self.langfuse_ui_port), ("langfuse_media_port", self.langfuse_media_port)):
+            if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 65535:
+                raise ValueError(f"{label} must be a TCP port")
         hub = urlparse(self.hub_ingest_url)
         if hub.scheme != "http" or hub.port or hub.path or hub.query or hub.username:
             raise ValueError("hub_ingest_url must be an http://host address without a port or path")

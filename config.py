@@ -20,5 +20,9 @@ CONFIG = ProjectConfig(
     edge_log_glob="*.log",
     langfuse_otlp_url="",  # Optional: https://host/api/public/otel
     langfuse_ui_url="",  # Optional browser link, such as https://host
+    langfuse_bind_ip="127.0.0.1",
+    langfuse_ui_port=3001,
+    langfuse_media_port=9092,
+    langfuse_media_url="http://localhost:9092",
     metric_queries={},  # Optional named PromQL queries for this project.
 )

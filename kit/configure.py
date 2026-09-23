@@ -101,7 +101,14 @@ def write_config(config: ProjectConfig = CONFIG, root: Path = ROOT) -> None:
     log_dir = Path(config.edge_log_dir) if config.edge_log_dir else edge / "logs"
     if not config.edge_log_dir:
         log_dir.mkdir(exist_ok=True)
-    (root / ".runtime.env").write_text(f"HUB_BIND_IP={config.hub_bind_ip}\n")
+    (root / ".runtime.env").write_text(
+        f"HUB_BIND_IP={config.hub_bind_ip}\n"
+        f"LANGFUSE_BIND_IP={config.langfuse_bind_ip}\n"
+        f"LANGFUSE_UI_PORT={config.langfuse_ui_port}\n"
+        f"LANGFUSE_MEDIA_PORT={config.langfuse_media_port}\n"
+        f"LANGFUSE_UI_URL={_quoted(config.langfuse_ui_url or f'http://localhost:{config.langfuse_ui_port}')}\n"
+        f"LANGFUSE_MEDIA_URL={_quoted(config.langfuse_media_url)}\n"
+    )
     (edge / ".runtime.env").write_text(
         f"EDGE_LOG_DIR={_quoted(str(log_dir))}\nEDGE_BIND_IP={config.edge_bind_ip}\n"
     )
