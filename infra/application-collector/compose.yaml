@@ -1,4 +1,4 @@
-name: agno-observability-kit-edge
+name: agno-observability-kit-collector
 
 services:
   alloy:
@@ -11,13 +11,13 @@ services:
       - /etc/alloy/config.alloy
       - --storage.path=/var/lib/alloy
     ports:
-      - "${EDGE_BIND_IP:-127.0.0.1}:4317:4317"
-      - "${EDGE_BIND_IP:-127.0.0.1}:4318:4318"
+      - "${COLLECTOR_BIND_IP:-127.0.0.1}:4317:4317"
+      - "${COLLECTOR_BIND_IP:-127.0.0.1}:4318:4318"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./generated.alloy:/etc/alloy/config.alloy:ro
-      - ${EDGE_LOG_DIR:-./logs}:/var/log/observed:ro
+      - ${COLLECTOR_LOG_DIR:-./logs}:/var/log/observed:ro
       - alloy-data:/var/lib/alloy
     restart: unless-stopped
 

@@ -13,13 +13,13 @@ class ProjectConfig:
     project_name: str = "Example project"
     environment: str = "local"
     agentos_url: str = ""
-    hub_bind_ip: str = "127.0.0.1"
-    hub_ingest_url: str = "http://host.docker.internal"
-    edge_bind_ip: str = "127.0.0.1"
+    observability_bind_ip: str = "127.0.0.1"
+    observability_ingest_url: str = "http://host.docker.internal"
+    collector_bind_ip: str = "127.0.0.1"
     metrics_target: str = ""
     metrics_path: str = "/metrics"
-    edge_log_dir: str = ""
-    edge_log_glob: str = "*.log"
+    collector_log_dir: str = ""
+    collector_log_glob: str = "*.log"
     langfuse_otlp_url: str = ""
     langfuse_ui_url: str = ""
     langfuse_bind_ip: str = "127.0.0.1"
@@ -36,7 +36,7 @@ class ProjectConfig:
             raise ValueError("project_name cannot be empty")
         for label, value in (
             ("agentos_url", self.agentos_url),
-            ("hub_ingest_url", self.hub_ingest_url),
+            ("observability_ingest_url", self.observability_ingest_url),
             ("langfuse_otlp_url", self.langfuse_otlp_url),
             ("langfuse_ui_url", self.langfuse_ui_url),
             ("langfuse_media_url", self.langfuse_media_url),
@@ -46,8 +46,8 @@ class ProjectConfig:
             if value and (urlparse(value).username or urlparse(value).password):
                 raise ValueError(f"{label} cannot contain credentials")
         for label, value in (
-            ("hub_bind_ip", self.hub_bind_ip),
-            ("edge_bind_ip", self.edge_bind_ip),
+            ("observability_bind_ip", self.observability_bind_ip),
+            ("collector_bind_ip", self.collector_bind_ip),
             ("langfuse_bind_ip", self.langfuse_bind_ip),
         ):
             try:
@@ -57,9 +57,9 @@ class ProjectConfig:
         for label, value in (("langfuse_ui_port", self.langfuse_ui_port), ("langfuse_media_port", self.langfuse_media_port)):
             if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 65535:
                 raise ValueError(f"{label} must be a TCP port")
-        hub = urlparse(self.hub_ingest_url)
-        if hub.scheme != "http" or hub.port or hub.path or hub.query or hub.username:
-            raise ValueError("hub_ingest_url must be an http://host address without a port or path")
+        server = urlparse(self.observability_ingest_url)
+        if server.scheme != "http" or server.port or server.path or server.query or server.username:
+            raise ValueError("observability_ingest_url must be an http://host address without a port or path")
         if self.metrics_target:
             target = urlparse(f"http://{self.metrics_target}")
             try:
@@ -70,7 +70,7 @@ class ProjectConfig:
                 raise ValueError("metrics_target must be a host:port value")
         if not self.metrics_path.startswith("/"):
             raise ValueError("metrics_path must start with /")
-        if "/" in self.edge_log_glob or ".." in self.edge_log_glob:
-            raise ValueError("edge_log_glob must match files within edge_log_dir")
-        if self.edge_log_dir and not Path(self.edge_log_dir).is_absolute():
-            raise ValueError("edge_log_dir must be an absolute path")
+        if "/" in self.collector_log_glob or ".." in self.collector_log_glob:
+            raise ValueError("collector_log_glob must match files within collector_log_dir")
+        if self.collector_log_dir and not Path(self.collector_log_dir).is_absolute():
+            raise ValueError("collector_log_dir must be an absolute path")

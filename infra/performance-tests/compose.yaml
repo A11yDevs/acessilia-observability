@@ -1,4 +1,4 @@
-name: agno-observability-kit-loadtest
+name: agno-observability-kit-performance-tests
 
 services:
   locust:

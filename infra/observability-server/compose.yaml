@@ -21,7 +21,7 @@ services:
       - --storage.tsdb.path=/prometheus
       - --web.enable-remote-write-receiver
     ports:
-      - "${HUB_BIND_IP:-127.0.0.1}:9090:9090"
+      - "${OBSERVABILITY_BIND_IP:-127.0.0.1}:9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -31,7 +31,7 @@ services:
     image: grafana/loki:3.7.6
     command: -config.file=/etc/loki/loki.yml
     ports:
-      - "${HUB_BIND_IP:-127.0.0.1}:3100:3100"
+      - "${OBSERVABILITY_BIND_IP:-127.0.0.1}:3100:3100"
     volumes:
       - ./loki.yml:/etc/loki/loki.yml:ro
       - loki-data:/loki
@@ -42,7 +42,7 @@ services:
     command: -config.file=/etc/tempo.yml
     ports:
       - "127.0.0.1:3200:3200"
-      - "${HUB_BIND_IP:-127.0.0.1}:4318:4318"
+      - "${OBSERVABILITY_BIND_IP:-127.0.0.1}:4318:4318"
     volumes:
       - ./tempo.yml:/etc/tempo.yml:ro
       - tempo-data:/var/tempo

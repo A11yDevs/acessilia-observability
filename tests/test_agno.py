@@ -14,7 +14,7 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ProjectConfig(agentos_url="example.test")
         with self.assertRaises(ValueError):
-            ProjectConfig(edge_bind_ip="public.example")
+            ProjectConfig(collector_bind_ip="public.example")
         with self.assertRaises(ValueError):
             ProjectConfig(langfuse_ui_port=0)
 

@@ -1,4 +1,4 @@
-"""Render the edge collector configuration."""
+"""Render the application collector configuration."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ def _quoted(value: str) -> str:
 
 
 def render_alloy(config: ProjectConfig) -> str:
-    hub = config.hub_ingest_url.rstrip("/")
+    server = config.observability_ingest_url.rstrip("/")
     trace_destinations = ["otelcol.exporter.otlphttp.tempo.input"]
     if config.langfuse_otlp_url:
         trace_destinations.append("otelcol.exporter.otlphttp.langfuse.input")
@@ -21,27 +21,27 @@ def render_alloy(config: ProjectConfig) -> str:
         '  grpc { endpoint = "0.0.0.0:4317" }\n'
         '  http { endpoint = "0.0.0.0:4318" }\n'
         '  output {\n'
-        '    metrics = [otelcol.exporter.prometheus.hub.input]\n'
-        '    logs = [otelcol.exporter.loki.hub.input]\n'
+        '    metrics = [otelcol.exporter.prometheus.server.input]\n'
+        '    logs = [otelcol.exporter.loki.server.input]\n'
         f'    traces = [{", ".join(trace_destinations)}]\n'
         '  }\n'
         '}\n',
-        'otelcol.exporter.prometheus "hub" {\n'
-        '  forward_to = [prometheus.remote_write.hub.receiver]\n'
+        'otelcol.exporter.prometheus "server" {\n'
+        '  forward_to = [prometheus.remote_write.server.receiver]\n'
         '}\n',
-        'prometheus.remote_write "hub" {\n'
+        'prometheus.remote_write "server" {\n'
         f'  external_labels = {{ project_id = {_quoted(config.project_id)}, environment = {_quoted(config.environment)} }}\n'
-        f'  endpoint {{ url = {_quoted(f"{hub}:9090/api/v1/write")} }}\n'
+        f'  endpoint {{ url = {_quoted(f"{server}:9090/api/v1/write")} }}\n'
         '}\n',
-        'otelcol.exporter.loki "hub" {\n'
-        '  forward_to = [loki.write.hub.receiver]\n'
+        'otelcol.exporter.loki "server" {\n'
+        '  forward_to = [loki.write.server.receiver]\n'
         '}\n',
-        'loki.write "hub" {\n'
+        'loki.write "server" {\n'
         f'  external_labels = {{ project_id = {_quoted(config.project_id)}, environment = {_quoted(config.environment)} }}\n'
-        f'  endpoint {{ url = {_quoted(f"{hub}:3100/loki/api/v1/push")} }}\n'
+        f'  endpoint {{ url = {_quoted(f"{server}:3100/loki/api/v1/push")} }}\n'
         '}\n',
         'otelcol.exporter.otlphttp "tempo" {\n'
-        f'  client {{ endpoint = {_quoted(f"{hub}:4318")} }}\n'
+        f'  client {{ endpoint = {_quoted(f"{server}:4318")} }}\n'
         '}\n',
     ]
     if config.langfuse_otlp_url:
@@ -67,20 +67,20 @@ def render_alloy(config: ProjectConfig) -> str:
             f'    project_id = {_quoted(config.project_id)},\n'
             f'    environment = {_quoted(config.environment)},\n'
             '  }]\n'
-            '  forward_to = [prometheus.remote_write.hub.receiver]\n'
+            '  forward_to = [prometheus.remote_write.server.receiver]\n'
             '}\n',
         ])
-    if config.edge_log_dir:
+    if config.collector_log_dir:
         blocks.extend([
             'loki.source.file "application" {\n'
             '  targets = [{\n'
-            f'    __path__ = {_quoted(f"/var/log/observed/{config.edge_log_glob}")},\n'
+            f'    __path__ = {_quoted(f"/var/log/observed/{config.collector_log_glob}")},\n'
             f'    project_id = {_quoted(config.project_id)},\n'
             f'    environment = {_quoted(config.environment)},\n'
             '    job = "application",\n'
             '  }]\n'
             '  file_match { enabled = true }\n'
-            '  forward_to = [loki.write.hub.receiver]\n'
+            '  forward_to = [loki.write.server.receiver]\n'
             '}\n',
         ])
     return "\n".join(blocks)
