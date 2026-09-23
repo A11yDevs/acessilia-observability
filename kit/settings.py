@@ -17,7 +17,7 @@ class ProjectConfig:
     metrics_path: str = "/metrics"
     edge_log_dir: str = ""
     edge_log_glob: str = "*.log"
-    metric_queries: dict[str, str] = field(default_factory=lambda: {"Targets up": "up"})
+    metric_queries: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         for label, value in (("project_id", self.project_id), ("environment", self.environment)):
@@ -34,4 +34,3 @@ class ProjectConfig:
             raise ValueError("metrics_path must start with /")
         if "/" in self.edge_log_glob or ".." in self.edge_log_glob:
             raise ValueError("edge_log_glob must match files within edge_log_dir")
-

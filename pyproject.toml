@@ -16,3 +16,5 @@ dependencies = [
 [tool.setuptools.packages.find]
 include = ["kit*"]
 
+[tool.setuptools.package-data]
+kit = ["static/*"]

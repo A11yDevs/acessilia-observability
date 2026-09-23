@@ -1,0 +1,28 @@
+:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #e7e9ef; background: #0d1119; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 18px clamp(20px, 5vw, 72px); border-bottom: 1px solid #26303d; }
+.brand { font-size: .78rem; font-weight: 750; letter-spacing: .15em; }
+.brand-mark { color: #9cf2bc; font-size: 1.35rem; vertical-align: middle; margin-right: 10px; }
+.badge, .source, .status { border: 1px solid #344151; border-radius: 999px; padding: 5px 10px; font-size: .76rem; color: #a9bac9; }
+main { max-width: 1440px; margin: auto; padding: 52px clamp(20px, 5vw, 72px) 80px; }
+.intro, .card-head { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.intro { margin-bottom: 25px; }
+.eyebrow { color: #9cf2bc; letter-spacing: .15em; font-size: .75rem; font-weight: 700; }
+h1 { margin: 5px 0; font-size: clamp(2rem, 5vw, 3.3rem); letter-spacing: -.045em; }
+h2 { margin: 0; font-size: 1.1rem; }
+.muted { color: #a9bac9; }
+button, select { border: 1px solid #415268; border-radius: 9px; background: #1b2633; color: #f3f5f8; padding: 10px 14px; font: inherit; cursor: pointer; }
+button:hover, select:hover { border-color: #9cf2bc; }
+button:focus-visible, select:focus-visible { outline: 2px solid #9cf2bc; outline-offset: 3px; }
+.notice { min-height: 1.5rem; color: #f6bc8b; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.card { min-height: 230px; background: #151d29; border: 1px solid #2b3644; border-radius: 14px; padding: 22px; }
+.card-head { margin-bottom: 22px; }
+.entity-list, .data-list { display: grid; gap: 10px; }
+.row { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #2b3644; padding-top: 10px; overflow-wrap: anywhere; }
+.row small { color: #9daabb; }
+.error { color: #f6bc8b; }
+.ok { color: #9cf2bc; }
+@media (max-width: 780px) { .grid { grid-template-columns: 1fr; } .intro { align-items: flex-start; flex-direction: column; } main { padding-top: 32px; } }
+

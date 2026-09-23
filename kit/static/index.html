@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Observability</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">◎</span> AGNO OBSERVABILITY KIT</div>
+    <span id="environment" class="badge">Loading</span>
+  </header>
+  <main>
+    <section class="intro">
+      <div><p class="eyebrow">PROJECT OVERVIEW</p><h1 id="project-name">Observability</h1><p id="project-id" class="muted">Connecting to project…</p></div>
+      <button id="refresh" type="button">Refresh data</button>
+    </section>
+    <p id="notice" class="notice" role="status" aria-live="polite"></p>
+    <div class="grid">
+      <section class="card" aria-labelledby="agentos-heading">
+        <div class="card-head"><h2 id="agentos-heading">AgentOS</h2><span id="agentos-status" class="status">Checking</span></div>
+        <p id="agentos-meta" class="muted">Discovering available components.</p>
+        <div id="entities" class="entity-list"></div>
+      </section>
+      <section class="card" aria-labelledby="metrics-heading">
+        <div class="card-head"><h2 id="metrics-heading">Metrics</h2><span class="source">Prometheus</span></div>
+        <div id="metrics" class="data-list muted">Loading metrics…</div>
+      </section>
+      <section class="card" aria-labelledby="sessions-heading">
+        <div class="card-head"><h2 id="sessions-heading">Sessions</h2><select id="session-type" aria-label="Session type"><option value="agent">Agents</option><option value="team">Teams</option><option value="workflow">Workflows</option></select></div>
+        <div id="sessions" class="data-list muted">Loading sessions…</div>
+      </section>
+      <section class="card" aria-labelledby="logs-heading">
+        <div class="card-head"><h2 id="logs-heading">Recent logs</h2><span class="source">Loki</span></div>
+        <div id="logs" class="data-list muted">Loading logs…</div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
+

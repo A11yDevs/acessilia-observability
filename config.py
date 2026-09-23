@@ -17,6 +17,5 @@ CONFIG = ProjectConfig(
     metrics_path="/metrics",
     edge_log_dir="",  # Optional absolute directory on the monitored host.
     edge_log_glob="*.log",
-    metric_queries={"Targets up": "up"},
+    metric_queries={},  # Optional named PromQL queries for this project.
 )
-
