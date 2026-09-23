@@ -7,7 +7,11 @@ import httpx
 
 
 async def query_metrics(base_url: str, project_id: str, queries: dict[str, str]) -> dict[str, Any]:
-    all_queries = {"Targets up": f'up{{project_id="{project_id}"}}', **queries}
+    all_queries = {
+        "Metric series": f'count({{project_id="{project_id}"}})',
+        "Targets up": f'up{{project_id="{project_id}"}}',
+        **queries,
+    }
     result: dict[str, Any] = {}
     async with httpx.AsyncClient(timeout=8) as client:
         for name, expression in all_queries.items():
@@ -29,4 +33,3 @@ async def query_metrics(base_url: str, project_id: str, queries: dict[str, str])
                         values.append({"labels": item.get("metric", {}), "value": value})
             result[name] = values
     return result
-

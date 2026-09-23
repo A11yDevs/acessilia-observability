@@ -22,7 +22,25 @@ def render_alloy(config: ProjectConfig) -> str:
         'otelcol.receiver.otlp "application" {\n'
         '  grpc { endpoint = "0.0.0.0:4317" }\n'
         '  http { endpoint = "0.0.0.0:4318" }\n'
-        '  output { traces = [otelcol.exporter.otlphttp.tempo.input] }\n'
+        '  output {\n'
+        '    metrics = [otelcol.exporter.prometheus.hub.input]\n'
+        '    logs = [otelcol.exporter.loki.hub.input]\n'
+        '    traces = [otelcol.exporter.otlphttp.tempo.input]\n'
+        '  }\n'
+        '}\n',
+        'otelcol.exporter.prometheus "hub" {\n'
+        '  forward_to = [prometheus.remote_write.hub.receiver]\n'
+        '}\n',
+        'prometheus.remote_write "hub" {\n'
+        f'  external_labels = {{ project_id = {_quoted(config.project_id)}, environment = {_quoted(config.environment)} }}\n'
+        f'  endpoint {{ url = {_quoted(f"{hub}:9090/api/v1/write")} }}\n'
+        '}\n',
+        'otelcol.exporter.loki "hub" {\n'
+        '  forward_to = [loki.write.hub.receiver]\n'
+        '}\n',
+        'loki.write "hub" {\n'
+        f'  external_labels = {{ project_id = {_quoted(config.project_id)}, environment = {_quoted(config.environment)} }}\n'
+        f'  endpoint {{ url = {_quoted(f"{hub}:3100/loki/api/v1/push")} }}\n'
         '}\n',
         'otelcol.exporter.otlphttp "tempo" {\n'
         f'  client {{ endpoint = {_quoted(f"{hub}:4318")} }}\n'
@@ -39,9 +57,6 @@ def render_alloy(config: ProjectConfig) -> str:
             '  }]\n'
             '  forward_to = [prometheus.remote_write.hub.receiver]\n'
             '}\n',
-            'prometheus.remote_write "hub" {\n'
-            f'  endpoint {{ url = {_quoted(f"{hub}:9090/api/v1/write")} }}\n'
-            '}\n',
         ])
     if config.edge_log_dir:
         blocks.extend([
@@ -54,9 +69,6 @@ def render_alloy(config: ProjectConfig) -> str:
             '  }]\n'
             '  file_match { enabled = true }\n'
             '  forward_to = [loki.write.hub.receiver]\n'
-            '}\n',
-            'loki.write "hub" {\n'
-            f'  endpoint {{ url = {_quoted(f"{hub}:3100/loki/api/v1/push")} }}\n'
             '}\n',
         ])
     return "\n".join(blocks)

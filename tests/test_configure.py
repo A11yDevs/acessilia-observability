@@ -10,6 +10,9 @@ class ConfigureTests(unittest.TestCase):
     def test_optional_collectors_are_absent_until_configured(self):
         text = render_alloy(ProjectConfig())
         self.assertIn("otelcol.receiver.otlp", text)
+        self.assertIn("metrics = [otelcol.exporter.prometheus.hub.input]", text)
+        self.assertIn("logs = [otelcol.exporter.loki.hub.input]", text)
+        self.assertIn('external_labels = { project_id = "example", environment = "local" }', text)
         self.assertNotIn("prometheus.scrape", text)
         self.assertNotIn("loki.source.file", text)
 
