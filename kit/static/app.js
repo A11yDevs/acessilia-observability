@@ -32,6 +32,8 @@ async function loadConfig() {
   $('project-id').textContent = config.project_id;
   $('environment').textContent = config.environment;
   document.title = `${config.project_name} · Observability`;
+  $('langfuse-link').hidden = !config.langfuse_ui_url;
+  if (config.langfuse_ui_url) $('langfuse-link').href = config.langfuse_ui_url;
   if (!config.configured) $('notice').textContent = 'Set agentos_url in config.py to connect an AgentOS instance.';
 }
 

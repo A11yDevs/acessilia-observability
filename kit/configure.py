@@ -18,6 +18,9 @@ def _quoted(value: str) -> str:
 
 def render_alloy(config: ProjectConfig) -> str:
     hub = config.hub_ingest_url.rstrip("/")
+    trace_destinations = ["otelcol.exporter.otlphttp.tempo.input"]
+    if config.langfuse_otlp_url:
+        trace_destinations.append("otelcol.exporter.otlphttp.langfuse.input")
     blocks = [
         'otelcol.receiver.otlp "application" {\n'
         '  grpc { endpoint = "0.0.0.0:4317" }\n'
@@ -25,7 +28,7 @@ def render_alloy(config: ProjectConfig) -> str:
         '  output {\n'
         '    metrics = [otelcol.exporter.prometheus.hub.input]\n'
         '    logs = [otelcol.exporter.loki.hub.input]\n'
-        '    traces = [otelcol.exporter.otlphttp.tempo.input]\n'
+        f'    traces = [{", ".join(trace_destinations)}]\n'
         '  }\n'
         '}\n',
         'otelcol.exporter.prometheus "hub" {\n'
@@ -46,6 +49,22 @@ def render_alloy(config: ProjectConfig) -> str:
         f'  client {{ endpoint = {_quoted(f"{hub}:4318")} }}\n'
         '}\n',
     ]
+    if config.langfuse_otlp_url:
+        blocks.extend([
+            'otelcol.auth.basic "langfuse" {\n'
+            '  client_auth {\n'
+            '    username = sys.env("LANGFUSE_PUBLIC_KEY")\n'
+            '    password = sys.env("LANGFUSE_SECRET_KEY")\n'
+            '  }\n'
+            '}\n',
+            'otelcol.exporter.otlphttp "langfuse" {\n'
+            '  client {\n'
+            f'    endpoint = {_quoted(config.langfuse_otlp_url.rstrip("/"))}\n'
+            '    auth = otelcol.auth.basic.langfuse.handler\n'
+            '    headers = { "x-langfuse-ingestion-version" = "4" }\n'
+            '  }\n'
+            '}\n',
+        ])
     if config.metrics_target:
         blocks.extend([
             'prometheus.scrape "application" {\n'

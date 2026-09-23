@@ -1,6 +1,9 @@
 services:
   alloy:
     image: grafana/alloy:v1.18.1
+    env_file:
+      - path: .env
+        required: false
     command:
       - run
       - /etc/alloy/config.alloy

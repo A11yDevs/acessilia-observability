@@ -47,6 +47,7 @@ def create_app(config: ProjectConfig = CONFIG) -> FastAPI:
             "project_name": config.project_name,
             "environment": config.environment,
             "configured": bool(config.agentos_url),
+            "langfuse_ui_url": config.langfuse_ui_url,
         }
 
     @app.get("/api/entities")
@@ -85,4 +86,3 @@ def create_app(config: ProjectConfig = CONFIG) -> FastAPI:
 
 
 app = create_app()
-

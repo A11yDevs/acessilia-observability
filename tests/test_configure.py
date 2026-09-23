@@ -33,6 +33,15 @@ class ConfigureTests(unittest.TestCase):
             self.assertEqual((root / "edge/generated.alloy").read_text(), text)
             self.assertEqual((root / "loadtest/.runtime.env").read_text(), 'LOCUST_TARGET_URL=""\n')
 
+    def test_langfuse_fanout_uses_runtime_credentials(self):
+        config = ProjectConfig(langfuse_otlp_url="https://trace.example/api/public/otel")
+        text = render_alloy(config)
+        self.assertIn("otelcol.exporter.otlphttp.langfuse.input", text)
+        self.assertIn('endpoint = "https://trace.example/api/public/otel"', text)
+        self.assertIn('sys.env("LANGFUSE_PUBLIC_KEY")', text)
+        self.assertIn('"x-langfuse-ingestion-version" = "4"', text)
+        self.assertNotIn("pk-lf-", text)
+
 
 if __name__ == "__main__":
     unittest.main()

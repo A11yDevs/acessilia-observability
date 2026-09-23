@@ -18,5 +18,7 @@ CONFIG = ProjectConfig(
     metrics_path="/metrics",
     edge_log_dir="",  # Optional absolute directory on the monitored host.
     edge_log_glob="*.log",
+    langfuse_otlp_url="",  # Optional: https://host/api/public/otel
+    langfuse_ui_url="",  # Optional browser link, such as https://host
     metric_queries={},  # Optional named PromQL queries for this project.
 )

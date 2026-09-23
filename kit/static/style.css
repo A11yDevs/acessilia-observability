@@ -13,6 +13,8 @@ h1 { margin: 5px 0; font-size: clamp(2rem, 5vw, 3.3rem); letter-spacing: -.045em
 h2 { margin: 0; font-size: 1.1rem; }
 .muted { color: #a9bac9; }
 button, select { border: 1px solid #415268; border-radius: 9px; background: #1b2633; color: #f3f5f8; padding: 10px 14px; font: inherit; cursor: pointer; }
+.actions { display: flex; gap: 12px; align-items: center; }
+.actions a { color: #9cf2bc; }
 button:hover, select:hover { border-color: #9cf2bc; }
 button:focus-visible, select:focus-visible { outline: 2px solid #9cf2bc; outline-offset: 3px; }
 .notice { min-height: 1.5rem; color: #f6bc8b; }
@@ -25,4 +27,3 @@ button:focus-visible, select:focus-visible { outline: 2px solid #9cf2bc; outline
 .error { color: #f6bc8b; }
 .ok { color: #9cf2bc; }
 @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } .intro { align-items: flex-start; flex-direction: column; } main { padding-top: 32px; } }
-

@@ -5,6 +5,7 @@ __pycache__/
 .runtime.env
 edge/.runtime.env
 edge/generated.alloy
+edge/.env
 loadtest/.runtime.env
 .pytest_cache/
 *.egg-info/

@@ -20,6 +20,8 @@ class ProjectConfig:
     metrics_path: str = "/metrics"
     edge_log_dir: str = ""
     edge_log_glob: str = "*.log"
+    langfuse_otlp_url: str = ""
+    langfuse_ui_url: str = ""
     metric_queries: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -28,7 +30,12 @@ class ProjectConfig:
                 raise ValueError(f"{label} must contain only letters, digits, dots, underscores or hyphens")
         if not self.project_name.strip():
             raise ValueError("project_name cannot be empty")
-        for label, value in (("agentos_url", self.agentos_url), ("hub_ingest_url", self.hub_ingest_url)):
+        for label, value in (
+            ("agentos_url", self.agentos_url),
+            ("hub_ingest_url", self.hub_ingest_url),
+            ("langfuse_otlp_url", self.langfuse_otlp_url),
+            ("langfuse_ui_url", self.langfuse_ui_url),
+        ):
             if value and (urlparse(value).scheme not in {"http", "https"} or not urlparse(value).netloc):
                 raise ValueError(f"{label} must be an HTTP(S) URL")
             if value and (urlparse(value).username or urlparse(value).password):
