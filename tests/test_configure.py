@@ -41,6 +41,8 @@ class ConfigureTests(unittest.TestCase):
         self.assertIn("otelcol.exporter.otlphttp.langfuse.input", text)
         self.assertIn('endpoint = "https://trace.example/api/public/otel"', text)
         self.assertIn('sys.env("LANGFUSE_PUBLIC_KEY")', text)
+        self.assertIn('  username = sys.env("LANGFUSE_PUBLIC_KEY")', text)
+        self.assertNotIn("client_auth", text)
         self.assertIn('"x-langfuse-ingestion-version" = "4"', text)
         self.assertNotIn("pk-lf-", text)
 

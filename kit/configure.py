@@ -52,10 +52,8 @@ def render_alloy(config: ProjectConfig) -> str:
     if config.langfuse_otlp_url:
         blocks.extend([
             'otelcol.auth.basic "langfuse" {\n'
-            '  client_auth {\n'
-            '    username = sys.env("LANGFUSE_PUBLIC_KEY")\n'
-            '    password = sys.env("LANGFUSE_SECRET_KEY")\n'
-            '  }\n'
+            '  username = sys.env("LANGFUSE_PUBLIC_KEY")\n'
+            '  password = sys.env("LANGFUSE_SECRET_KEY")\n'
             '}\n',
             'otelcol.exporter.otlphttp "langfuse" {\n'
             '  client {\n'
