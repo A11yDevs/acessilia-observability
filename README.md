@@ -20,6 +20,29 @@ python3 -m venv .venv
 .venv/bin/pip install -e .
 ```
 
+## Connect an AgentOS project
+
+Use this checklist when an Agno application is available. The AgentOS API and the observability server can run on different machines. The example addresses below are private network addresses; replace them with your own.
+
+1. Connect both machines through a private network. Confirm that the observability server can reach the application's AgentOS API, and that the application host can reach the observability server. Start the private network before Docker Compose.
+2. On **both machines**, edit `config.py` with the same project settings:
+
+   ```python
+   project_id="my-project",
+   project_name="My project",
+   environment="production",
+   agentos_url="http://100.64.0.20:7777",
+   observability_bind_ip="100.64.0.10",
+   observability_ingest_url="http://100.64.0.10",
+   ```
+
+   Here `100.64.0.10` is the observability server and `100.64.0.20` is the application host. `agentos_url` must work **inside the panel container**. Keep `collector_bind_ip="127.0.0.1"` when the application runs directly on its host. If the application runs in a container, set it to a private host interface that the application container can reach.
+3. On the observability server, copy `.env.example` to `.env`. Set `GRAFANA_ADMIN_PASSWORD`, and set `AGENTOS_TOKEN` if AgentOS requires a bearer credential. Keep the AgentOS API reachable only over the private network.
+4. On each machine, run `.venv/bin/python -m agno_observability_kit.configure`. On the observability server, start the [observability server](#start-the-observability-server). On the application host, start the [application collector](#start-the-application-collector).
+5. On the observability server, check discovery with `curl -fsS http://127.0.0.1:8010/api/entities`. The response should list the registered agents, teams and workflows. Open `http://127.0.0.1:8010` to see the panel. For a remote browser, use an SSH tunnel to port `8010` rather than publishing the panel publicly.
+
+An API connection supplies the component list. Sessions and runs require persistence in AgentOS. Metrics, logs and traces require the application to emit those signals to the collector; pointing `agentos_url` at the API does not export them. The planned application instrumentation and remote deployment work is tracked in [the implementation plan](docs/implementation-plan.md). Agno's current [API guide](https://docs.agno.com/agent-os/using-the-api) describes `/info` and `/config`; applications using a restricted public AgentOS surface may hide these administrative routes.
+
 ## Configure the project
 
 Edit [`config.py`](config.py). Set `project_id`, `project_name`, `environment` and `agentos_url`. The URL must be reachable **from inside the panel container**; `localhost` inside that container is not the monitored host. The panel uses `/info` and `/config` when available, then falls back to `/agents`, `/teams` and `/workflows`.
