@@ -2,7 +2,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from agno_observability_kit.configure import render_alloy, write_config
+from agno_observability_kit.alloy import render_alloy
+from agno_observability_kit.configure import write_config
 from agno_observability_kit.settings import ProjectConfig
 
 
