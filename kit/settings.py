@@ -30,6 +30,8 @@ class ProjectConfig:
         for label, value in (("agentos_url", self.agentos_url), ("hub_ingest_url", self.hub_ingest_url)):
             if value and (urlparse(value).scheme not in {"http", "https"} or not urlparse(value).netloc):
                 raise ValueError(f"{label} must be an HTTP(S) URL")
+            if value and (urlparse(value).username or urlparse(value).password):
+                raise ValueError(f"{label} cannot contain credentials")
         try:
             ipaddress.ip_address(self.hub_bind_ip)
         except ValueError as exc:

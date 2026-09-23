@@ -65,15 +65,17 @@ def render_alloy(config: ProjectConfig) -> str:
 def write_config(config: ProjectConfig = CONFIG, root: Path = ROOT) -> None:
     edge = root / "edge"
     edge.mkdir(exist_ok=True)
+    loadtest = root / "loadtest"
+    loadtest.mkdir(exist_ok=True)
     log_dir = Path(config.edge_log_dir) if config.edge_log_dir else edge / "logs"
     if not config.edge_log_dir:
         log_dir.mkdir(exist_ok=True)
     (root / ".runtime.env").write_text(f"HUB_BIND_IP={config.hub_bind_ip}\n")
     (edge / ".runtime.env").write_text(f"EDGE_LOG_DIR={_quoted(str(log_dir))}\n")
     (edge / "generated.alloy").write_text(render_alloy(config))
+    (loadtest / ".runtime.env").write_text(f"LOCUST_TARGET_URL={_quoted(config.agentos_url)}\n")
 
 
 if __name__ == "__main__":
     write_config()
-    print("Wrote .runtime.env, edge/.runtime.env and edge/generated.alloy")
-
+    print("Wrote runtime settings for hub, edge and loadtest")
