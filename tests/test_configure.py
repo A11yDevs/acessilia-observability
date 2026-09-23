@@ -26,6 +26,7 @@ class ConfigureTests(unittest.TestCase):
             root = Path(directory)
             write_config(config, root)
             self.assertEqual((root / ".runtime.env").read_text(), "HUB_BIND_IP=127.0.0.1\n")
+            self.assertIn("EDGE_BIND_IP=127.0.0.1", (root / "edge/.runtime.env").read_text())
             self.assertEqual((root / "edge/generated.alloy").read_text(), text)
             self.assertEqual((root / "loadtest/.runtime.env").read_text(), 'LOCUST_TARGET_URL=""\n')
 

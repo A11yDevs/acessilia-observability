@@ -13,6 +13,8 @@ class ConfigTests(unittest.TestCase):
             ProjectConfig(project_id="bad name")
         with self.assertRaises(ValueError):
             ProjectConfig(agentos_url="example.test")
+        with self.assertRaises(ValueError):
+            ProjectConfig(edge_bind_ip="public.example")
 
 
 class AgnoTests(unittest.TestCase):

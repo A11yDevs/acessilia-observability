@@ -15,6 +15,7 @@ class ProjectConfig:
     agentos_url: str = ""
     hub_bind_ip: str = "127.0.0.1"
     hub_ingest_url: str = "http://host.docker.internal"
+    edge_bind_ip: str = "127.0.0.1"
     metrics_target: str = ""
     metrics_path: str = "/metrics"
     edge_log_dir: str = ""
@@ -32,10 +33,11 @@ class ProjectConfig:
                 raise ValueError(f"{label} must be an HTTP(S) URL")
             if value and (urlparse(value).username or urlparse(value).password):
                 raise ValueError(f"{label} cannot contain credentials")
-        try:
-            ipaddress.ip_address(self.hub_bind_ip)
-        except ValueError as exc:
-            raise ValueError("hub_bind_ip must be an IP address") from exc
+        for label, value in (("hub_bind_ip", self.hub_bind_ip), ("edge_bind_ip", self.edge_bind_ip)):
+            try:
+                ipaddress.IPv4Address(value)
+            except ValueError as exc:
+                raise ValueError(f"{label} must be an IPv4 address") from exc
         hub = urlparse(self.hub_ingest_url)
         if hub.scheme != "http" or hub.port or hub.path or hub.query or hub.username:
             raise ValueError("hub_ingest_url must be an http://host address without a port or path")

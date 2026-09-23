@@ -71,7 +71,9 @@ def write_config(config: ProjectConfig = CONFIG, root: Path = ROOT) -> None:
     if not config.edge_log_dir:
         log_dir.mkdir(exist_ok=True)
     (root / ".runtime.env").write_text(f"HUB_BIND_IP={config.hub_bind_ip}\n")
-    (edge / ".runtime.env").write_text(f"EDGE_LOG_DIR={_quoted(str(log_dir))}\n")
+    (edge / ".runtime.env").write_text(
+        f"EDGE_LOG_DIR={_quoted(str(log_dir))}\nEDGE_BIND_IP={config.edge_bind_ip}\n"
+    )
     (edge / "generated.alloy").write_text(render_alloy(config))
     (loadtest / ".runtime.env").write_text(f"LOCUST_TARGET_URL={_quoted(config.agentos_url)}\n")
 
