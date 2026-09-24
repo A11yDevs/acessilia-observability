@@ -39,7 +39,7 @@ telemetry = configure_agno_telemetry(
 with trace.get_tracer("test").start_as_current_span("sample-run"):
     logging.getLogger("sample.app").warning("run complete", extra={"run_id": "run-1"})
     telemetry.record_run(component_type="agent", status="ok", duration_seconds=0.1)
-telemetry.flush()
+assert telemetry.flush()
 try:
     configure_agno_telemetry(service_name="test", project_id="sample", environment="test")
 except RuntimeError as error:

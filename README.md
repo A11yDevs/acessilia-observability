@@ -41,7 +41,7 @@ Use this checklist when an Agno application is available. The AgentOS API and th
 4. On each machine, run `.venv/bin/python -m agno_observability_kit.configure`. On the observability server, start the [observability server](#start-the-observability-server). On the application host, start the [application collector](#start-the-application-collector).
 5. On the observability server, check discovery with `curl -fsS http://127.0.0.1:8010/api/entities`. The response should list the registered agents, teams and workflows. Open `http://127.0.0.1:8010` to see the panel. For a remote browser, use an SSH tunnel to port `8010` rather than publishing the panel publicly.
 
-An API connection supplies the component list. Sessions and runs require persistence in AgentOS. Metrics, logs and traces require the application to emit those signals to the collector; pointing `agentos_url` at the API does not export them. The planned application instrumentation and remote deployment work is tracked in [the implementation plan](docs/implementation-plan.md). Agno's current [API guide](https://docs.agno.com/agent-os/using-the-api) describes `/info` and `/config`; applications using a restricted public AgentOS surface may hide these administrative routes.
+An API connection supplies the component list. Sessions and runs require persistence in AgentOS. Metrics, logs and traces require the application to emit those signals to the collector; pointing `agentos_url` at the API does not export them. The optional instrumentation setup is described below. Live integration checks still require an Agno application and private network; see [the implementation plan](docs/implementation-plan.md). Agno's current [API guide](https://docs.agno.com/agent-os/using-the-api) describes `/info` and `/config`; applications using a restricted public AgentOS surface may hide these administrative routes.
 
 ### Check a remote installation
 
@@ -65,7 +65,7 @@ Keep ports `8010` (panel) and `3000` (Grafana) on the observability server's loo
 ssh -L 8010:127.0.0.1:8010 -L 3000:127.0.0.1:3000 user@observability-server
 ```
 
-Then use `http://127.0.0.1:8010` and `http://127.0.0.1:3000` in that computer's browser. SSH provides the remote access control. If the panel must be published directly, put an authenticated HTTPS reverse proxy in front of it before changing the loopback bind.
+Then use `http://127.0.0.1:8010` and `http://127.0.0.1:3000` in that computer's browser. SSH provides the remote access control. If the panel must be published directly, put an authenticated HTTPS reverse proxy in front of it before changing the loopback bind. If self-hosted Langfuse is enabled, forward its UI port `3001` and media port `9092` through the same SSH connection.
 
 Allow only these private-network connections in the host firewalls or network ACLs:
 
@@ -190,7 +190,7 @@ docker compose -f infra/observability-server/compose.yaml -f infra/langfuse/comp
 
 By default, the UI is at `http://localhost:3001` and the media endpoint is at `http://localhost:9092`. If the application collector runs on another machine, set `langfuse_bind_ip` to a private address on the observability server and set `langfuse_ui_url` and `langfuse_media_url` to URLs using that address. Regenerate `infra/observability-server/.runtime.env` before starting the services. Allow access to the UI from the application collector only through a trusted private network. Langfuse's Docker Compose setup needs substantial memory and persistent storage; see its [deployment guide](https://langfuse.com/self-hosting/deployment/docker-compose).
 
-Create a Langfuse project and its API keys in the UI. Then set `langfuse_otlp_url` in `config.py` to the URL reachable **from Alloy on the monitored host**, ending in `/api/public/otel`, for example `http://100.64.0.10:3001/api/public/otel`. Set `langfuse_ui_url` to the browser URL to show its link in the panel. For Langfuse Cloud, use the base URL for the chosen data region followed by `/api/public/otel`.
+Create a Langfuse project and its API keys in the UI. Then set `langfuse_otlp_url` in `config.py` to the URL reachable **from Alloy on the monitored host**, ending in `/api/public/otel`, for example `http://100.64.0.10:3001/api/public/otel`. Set `langfuse_ui_url` to the project's browser URL to show its link in the panel. For Langfuse Cloud, use the base URL for the chosen data region followed by `/api/public/otel`.
 
 On the monitored host, put the project keys in `infra/application-collector/.env`, regenerate the Alloy configuration, and restart the application collector container:
 
@@ -202,6 +202,17 @@ docker compose -f infra/application-collector/compose.yaml --env-file infra/appl
 ```
 
 The credentials stay outside `config.py` and are sent as HTTP Basic authentication to Langfuse. The [Langfuse OTLP endpoint](https://langfuse.com/docs/observability/get-started) accepts traces; metrics and logs continue to Prometheus and Loki.
+
+To check a newly configured collector without calling a model, run this on the application host after installing the telemetry extra:
+
+```sh
+.venv/bin/pip install -e '.[telemetry]'
+.venv/bin/python -m agno_observability_kit.smoke_trace --collector-url http://127.0.0.1:4318
+```
+
+The command prints a trace ID. On the observability server, check Tempo with `curl -fsS http://127.0.0.1:3200/api/traces/TRACE_ID`, replacing `TRACE_ID` with that value. When Langfuse is enabled, search for the same ID in its project UI. The collector uses the project public and secret keys from `infra/application-collector/.env`; the smoke command does not read or print them. A trace in Tempo but absent from Langfuse points to the Langfuse URL, keys or collector exporter. Inspect `docker compose -f infra/application-collector/compose.yaml --env-file infra/application-collector/.runtime.env logs alloy` on the application host.
+
+To rotate Langfuse keys, update `infra/application-collector/.env`, then recreate only the collector with `docker compose -f infra/application-collector/compose.yaml --env-file infra/application-collector/.runtime.env up -d --force-recreate alloy`. When Langfuse is unavailable, Tempo export continues independently, but exporter retries and queues are bounded; do not assume indefinite trace retention during an outage.
 
 ## Performance tests
 
@@ -217,6 +228,7 @@ Locust is then available at `http://localhost:8089`. Use a separate test environ
 
 ```sh
 .venv/bin/python -m unittest discover -s tests -v
+RUN_DOCKER_INTEGRATION=1 .venv/bin/python -m unittest discover -s tests -p test_alloy_fanout.py -v
 docker compose -f infra/observability-server/compose.yaml --env-file .env --env-file infra/observability-server/.runtime.env config --quiet
 docker compose -f infra/application-collector/compose.yaml --env-file infra/application-collector/.runtime.env config --quiet
 docker compose -f infra/observability-server/compose.yaml -f infra/langfuse/compose.yaml --env-file .env --env-file infra/langfuse/.env --env-file infra/observability-server/.runtime.env config --quiet

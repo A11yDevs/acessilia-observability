@@ -16,6 +16,7 @@ class ConfigureTests(unittest.TestCase):
         self.assertIn('external_labels = { project_id = "example", environment = "local" }', text)
         self.assertNotIn("prometheus.scrape", text)
         self.assertNotIn("loki.source.file", text)
+        self.assertNotIn('otelcol.exporter.otlphttp "langfuse"', text)
 
     def test_rendered_collectors_have_project_labels(self):
         config = ProjectConfig(

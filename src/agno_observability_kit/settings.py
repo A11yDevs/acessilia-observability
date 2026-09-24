@@ -47,6 +47,10 @@ class ProjectConfig:
                 raise ValueError(f"{label} must be an HTTP(S) URL")
             if value and (urlparse(value).username or urlparse(value).password):
                 raise ValueError(f"{label} cannot contain credentials")
+        if self.langfuse_otlp_url:
+            langfuse = urlparse(self.langfuse_otlp_url)
+            if langfuse.path.rstrip("/") != "/api/public/otel" or langfuse.query or langfuse.fragment:
+                raise ValueError("langfuse_otlp_url must end in /api/public/otel without a query or fragment")
         for label, value in (
             ("observability_bind_ip", self.observability_bind_ip),
             ("collector_bind_ip", self.collector_bind_ip),

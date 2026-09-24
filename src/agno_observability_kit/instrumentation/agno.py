@@ -26,10 +26,13 @@ class AgnoTelemetry:
         self.run_counter.add(1, attributes)
         self.run_duration.record(duration_seconds, attributes)
 
-    def flush(self) -> None:
-        self.tracer_provider.force_flush()
-        self.meter_provider.force_flush()
-        self.logger_provider.force_flush()
+    def flush(self) -> bool:
+        results = (
+            self.tracer_provider.force_flush(),
+            self.meter_provider.force_flush(),
+            self.logger_provider.force_flush(),
+        )
+        return all(results)
 
 
 def configure_agno_telemetry(

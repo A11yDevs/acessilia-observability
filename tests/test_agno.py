@@ -19,6 +19,10 @@ class ConfigTests(unittest.TestCase):
             ProjectConfig(langfuse_ui_port=0)
         with self.assertRaises(ValueError):
             ProjectConfig(grafana_ui_url="not-a-url")
+        with self.assertRaises(ValueError):
+            ProjectConfig(langfuse_otlp_url="https://trace.example/wrong-path")
+        with self.assertRaises(ValueError):
+            ProjectConfig(langfuse_otlp_url="https://trace.example/api/public/otel?token=bad")
 
 
 class AgnoTests(unittest.TestCase):
