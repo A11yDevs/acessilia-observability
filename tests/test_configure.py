@@ -13,8 +13,10 @@ class ConfigureTests(unittest.TestCase):
         self.assertIn("otelcol.receiver.otlp", text)
         self.assertIn("metrics = [otelcol.exporter.prometheus.server.input]", text)
         self.assertIn("logs = [otelcol.exporter.loki.server.input]", text)
+        self.assertIn('prometheus.exporter.self "collector"', text)
+        self.assertIn('targets = prometheus.exporter.self.collector.targets', text)
         self.assertIn('external_labels = { project_id = "example", environment = "local" }', text)
-        self.assertNotIn("prometheus.scrape", text)
+        self.assertNotIn('prometheus.scrape "application"', text)
         self.assertNotIn("loki.source.file", text)
         self.assertNotIn('otelcol.exporter.otlphttp "langfuse"', text)
 

@@ -33,6 +33,12 @@ def render_alloy(config: ProjectConfig) -> str:
         f'  external_labels = {{ project_id = {_quoted(config.project_id)}, environment = {_quoted(config.environment)} }}\n'
         f'  endpoint {{ url = {_quoted(f"{server}:9090/api/v1/write")} }}\n'
         '}\n',
+        'prometheus.exporter.self "collector" {}\n',
+        'prometheus.scrape "collector" {\n'
+        '  targets = prometheus.exporter.self.collector.targets\n'
+        '  scrape_interval = "15s"\n'
+        '  forward_to = [prometheus.remote_write.server.receiver]\n'
+        '}\n',
         'otelcol.exporter.loki "server" {\n'
         '  forward_to = [loki.write.server.receiver]\n'
         '}\n',
