@@ -1,6 +1,6 @@
 # Agno Observability Kit
 
-A standalone, read-only observability server for an Agno AgentOS application. The observability server and the monitored application can run on different machines. The panel discovers agents, teams and workflows through the AgentOS API and reads persisted sessions and runs when AgentOS has a database. An optional Alloy process beside the application sends metrics, logs and traces to the observability server.
+A standalone observability and test server for an Agno AgentOS application. The observability server and the monitored application can run on different machines. The panel discovers agents, teams and workflows through the AgentOS API. Its test console can run each registered component on demand and show streamed events, results and persisted run metrics. An optional Alloy process beside the application sends metrics, logs and traces to the observability server.
 
 The kit monitors one project per installation. It does not import application code or require a shared Docker network or filesystem between the observability server and AgentOS.
 
@@ -39,9 +39,15 @@ Use this checklist when an Agno application is available. The AgentOS API and th
    Here `100.64.0.10` is the observability server and `100.64.0.20` is the application host. `agentos_url` must work **inside the panel container**. Keep `collector_bind_ip="127.0.0.1"` when the application runs directly on its host. If the application runs in a container, set it to a private host interface that the application container can reach.
 3. On the observability server, copy `.env.example` to `.env`. Set `GRAFANA_ADMIN_PASSWORD`, and set `AGENTOS_TOKEN` if AgentOS requires a bearer credential. Keep the AgentOS API reachable only over the private network.
 4. On each machine, run `.venv/bin/python -m agno_observability_kit.configure`. On the observability server, start the [observability server](#start-the-observability-server). On the application host, start the [application collector](#start-the-application-collector).
-5. On the observability server, check discovery with `curl -fsS http://127.0.0.1:8010/api/entities`. The response should list the registered agents, teams and workflows. Open `http://127.0.0.1:8010` to see the panel. For a remote browser, use an SSH tunnel to port `8010` rather than publishing the panel publicly.
+5. On the observability server, check discovery with `curl -fsS http://127.0.0.1:8010/api/entities`. The response should list the registered agents, teams and workflows. Open `http://127.0.0.1:8010` for monitoring or `/test` for direct runs. For a remote browser, use an SSH tunnel to port `8010` rather than publishing the panel publicly.
 
-An API connection supplies the component list. Sessions and runs require persistence in AgentOS. Metrics, logs and traces require the application to emit those signals to the collector; pointing `agentos_url` at the API does not export them. The optional instrumentation setup is described below. Live integration checks still require an Agno application and private network; see [the implementation plan](docs/implementation-plan.md). Agno's current [API guide](https://docs.agno.com/agent-os/using-the-api) describes `/info` and `/config`; applications using a restricted public AgentOS surface may hide these administrative routes.
+An API connection supplies the component list automatically. The test console never starts a run until a person submits one. Session history and stored results require persistence in AgentOS. Metrics, logs and traces require the application to emit those signals to the collector; pointing `agentos_url` at the API does not export them. The optional instrumentation setup is described below. Live integration checks still require an Agno application and private network; see [the implementation plan](docs/implementation-plan.md). Agno's current [API guide](https://docs.agno.com/agent-os/using-the-api) describes `/info` and `/config`; applications using a restricted public AgentOS surface may hide these administrative routes.
+
+### Test agents, teams and workflows
+
+Open `/test` after connecting AgentOS. Choose a discovered agent, team or workflow, enter a message and submit it. The panel forwards the request through its server to the corresponding AgentOS run endpoint, streams the response and shows the event sequence. Keep using the same session for a conversation, or start a new one. Select a saved run to inspect its metrics and events. AgentOS supplies saved sessions and runs when its database is configured. The panel does not keep a second copy of run content.
+
+Workflow step events appear in the event sequence when AgentOS emits them. To test an individual step function directly, register it as an agent or workflow in AgentOS; internal steps have no independent generic run endpoint. A workflow with an input schema can receive a JSON object entered as the message. The AgentOS credential in `AGENTOS_TOKEN` must allow run creation as well as discovery. Test submissions can invoke models and tools, so access to the panel also grants that ability. Keep the panel on loopback with an SSH tunnel or use an authenticated HTTPS proxy for other viewers.
 
 ### Check a remote installation
 
@@ -71,7 +77,7 @@ Allow only these private-network connections in the host firewalls or network AC
 
 | Source | Destination | TCP ports | Purpose |
 | --- | --- | --- | --- |
-| Observability server | Application host | AgentOS port, usually `7777` | Read AgentOS metadata, sessions and runs |
+| Observability server | Application host | AgentOS port, usually `7777` | Discover components, read history and submit test runs |
 | Application host | Observability server | `9090`, `3100`, `4318` | Send metrics, logs and traces |
 | Application process or container | Alloy on application host | `4318` or `4317` | Send OTLP signals locally |
 | Application host, if Langfuse is enabled | Langfuse endpoint | Endpoint port, usually `3001` or `443` | Send a copy of traces |
@@ -108,7 +114,7 @@ On the machine that will run the observability server:
 docker compose -f infra/observability-server/compose.yaml --env-file .env --env-file infra/observability-server/.runtime.env up -d --build
 ```
 
-Open the panel at `http://localhost:8010` and Grafana at `http://localhost:3000`. The panel and Grafana listen on loopback. Prometheus, Loki and the Tempo OTLP receiver bind to `observability_bind_ip`; keep that address inside a private network and restrict access to the monitored hosts. Grafana provisions a generic dashboard with run rate, error rate, duration and logs. It shows run metrics after the application calls `telemetry.record_run(...)`.
+Open the panel at `http://localhost:8010`, the test console at `http://localhost:8010/test`, and Grafana at `http://localhost:3000`. The panel and Grafana listen on loopback. Prometheus, Loki and the Tempo OTLP receiver bind to `observability_bind_ip`; keep that address inside a private network and restrict access to the monitored hosts. Grafana provisions a generic dashboard with run rate, error rate, duration and logs. Instrumented Agno runs produce these metrics automatically when their spans complete.
 
 After changing `config.py`, rerun `.venv/bin/python -m agno_observability_kit.configure` and rebuild the panel with `docker compose -f infra/observability-server/compose.yaml --env-file .env --env-file infra/observability-server/.runtime.env up -d --build panel`.
 
@@ -135,6 +141,8 @@ Signal sources are independent:
 For a process running directly on the monitored host, a typical OTLP HTTP endpoint is `http://127.0.0.1:4318`. A container must use an address that reaches the chosen `collector_bind_ip`. Set a stable OpenTelemetry `service.name` in the application. The application must export each signal it needs monitored; data stored in an AgentOS database does not automatically reach Prometheus, Loki or Tempo. The application collector adds `project_id` and `environment` labels to metric and log streams.
 
 The AgentOS native `/metrics` API contains persisted Agno aggregates. It is not assumed to be a Prometheus exposition endpoint. Configure `metrics_target` only when the application exposes Prometheus format metrics.
+
+Alloy scrapes its own health metrics every 15 seconds and sends them to Prometheus. The panel uses that heartbeat to report whether the collector is sending data. When Langfuse is configured, it also reads Alloy's exported span, failed export and queue metrics. “Delivered” means Alloy received a successful response from the Langfuse endpoint; confirm trace visibility in Langfuse when testing with a real project.
 
 ## Instrument an Agno application
 

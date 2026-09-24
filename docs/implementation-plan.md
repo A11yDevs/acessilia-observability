@@ -1,6 +1,6 @@
 # Implementation plan
 
-The kit monitors one Agno project per installation. AgentOS supplies component and session data through its HTTP API. An optional Alloy collector beside the application sends telemetry to Prometheus, Loki, Tempo and, when configured, Langfuse. The panel reads those services; the monitored application does not import panel code or share its filesystem.
+The kit monitors one Agno project per installation. AgentOS supplies component and session data through its HTTP API and executes explicit test requests from the panel. An optional Alloy collector beside the application sends telemetry to Prometheus, Loki, Tempo and, when configured, Langfuse. The monitored application does not import panel code or share its filesystem.
 
 ## Current progress
 
@@ -9,8 +9,9 @@ The kit monitors one Agno project per installation. AgentOS supplies component a
 | 1. Real AgentOS connection | Configurable API adapter, project settings, connection guide and local Agno 3.x API check | Connect an external AgentOS instance with persisted runs and authentication |
 | 2. Application instrumentation | Optional Agno/OpenTelemetry setup, standalone AgentOS example, OTLP trace, metric and log export, local receiver test | Verify spans from an actual Agno run in another application |
 | 3. Remote deployment | Separate Compose stacks, private interface binds, SSH access guide, connection checks | Exercise two machines or isolated networks with private routing, failure and restart behavior |
-| 4. Panel and Grafana | Source states, bounded history and log filters, session runs, trace links and provisioned dashboard | Check real telemetry, partial outages and AgentOS response variations |
-| 5. Optional Langfuse | Separate services, Alloy fan-out, credentials outside generated files, smoke command and synthetic outage check | Use real project keys and confirm the same Agno run in Tempo and Langfuse |
+| 4. Panel and Grafana | Source states including Alloy heartbeat, bounded history and log filters, session runs, trace links and provisioned dashboard | Check real telemetry, partial outages and AgentOS response variations |
+| 5. Optional Langfuse | Separate services, Alloy fan-out, exporter health from Alloy metrics, credentials outside generated files, smoke command and synthetic outage check | Use real project keys and confirm the same Agno run in Tempo and Langfuse |
+| 6. Test console | Explicit SSE runs for registered agents, teams and workflows, sessions, run results and step events | Check chats and workflow execution against an external AgentOS application |
 
 The local OTLP and Alloy tests use synthetic signals. They confirm exporter wiring and failure isolation but do not prove a deployment against a live AgentOS or Langfuse project.
 
@@ -62,7 +63,7 @@ The local OTLP and Alloy tests use synthetic signals. They confirm exporter wiri
 5. Provision a small Grafana dashboard with project and environment filters and links across metrics, logs and traces. Use standard telemetry fields; avoid application-specific agent names or query expressions.
 6. Verify loading, empty, partial outage and unauthorized states; test keyboard access and narrow screens.
 
-**Done when:** a user can select a time range, inspect a persisted run, find its related logs and open its trace when correlation data exists. The UI still works when only the AgentOS API is connected. Agent execution and chat controls remain outside this read-only panel.
+**Done when:** a user can select a time range, inspect a persisted run, find its related logs and open its trace when correlation data exists. The monitoring UI still works when only the AgentOS API is connected. The test console supplies explicit execution controls in a separate page.
 
 ## 5. Finish optional Langfuse integration
 
@@ -75,6 +76,18 @@ The local OTLP and Alloy tests use synthetic signals. They confirm exporter wiri
 
 **Done when:** enabling Langfuse requires only its URL and project keys, one run is visible in both tracing systems, and disabling it removes the exporter without changing the core stack.
 
+## 6. Test registered components
+
+**Goal:** run and inspect individual AgentOS components without adding application-specific code to the kit.
+
+1. Discover agents, teams and workflows from the configured AgentOS API and choose one in the test console. Do not execute anything during discovery.
+2. Submit a message through the panel's server to the matching AgentOS run endpoint. Keep bearer credentials out of the browser and forward streamed events, including workflow step events.
+3. Use AgentOS session IDs for continuation and its persisted runs for results, run metrics and history. A target without database persistence can still stream a live run but cannot provide saved history.
+4. Expose an individually testable step function by registering it as an AgentOS agent or workflow. Internal workflow steps appear in the event sequence but have no generic run endpoint of their own.
+5. Verify an agent, team and workflow against a live external AgentOS instance, including failed runs and restricted credentials. A local model-free workflow validates the route contract without a model key.
+
+**Done when:** a user can start and continue a session, observe its event sequence, and review stored results and metrics for every registered component type supported by the target AgentOS instance.
+
 ## Order and release checks
 
-Implement phase 2 first so phases 4 and 5 have real telemetry. Complete phase 3 before treating a deployment between machines as production-ready. Build phase 4 against the existing adapters, then validate phase 5 with real keys. Run phase 1's live checks as soon as an application is available, and feed any Agno API differences back into the adapter. Each phase should land in small, English-language commits with no application-specific names or secrets.
+The local implementation for phases 2–6 is in place. Complete phase 3's two-machine checks before treating a deployment as production-ready. Run phase 1 and phase 6 against an external AgentOS application as soon as one is available, then validate phase 5 with real Langfuse keys. Feed actual API differences back into the affected adapter. Each change should land in a small, English-language commit with no application-specific names or secrets.
