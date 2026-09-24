@@ -22,6 +22,7 @@ class QueryTests(unittest.TestCase):
         self.assertTrue(all(request.url.path == "/api/v1/query_range" for request in requests))
         self.assertEqual(int(requests[0].url.params["step"]), 80)
         self.assertIn('project_id="sample"', requests[0].url.params["query"])
+        self.assertIn("or vector(0)", requests[1].url.params["query"])
 
     def test_log_query_escapes_text_and_returns_correlation_fields(self):
         seen = []

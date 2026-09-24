@@ -40,7 +40,7 @@ async def query_history(base_url: str, project_id: str, hours: int, transport: h
     selector = f'project_id="{project_id}"'
     queries = {
         "Run rate": f'sum(rate(agno_runs_total{{{selector}}}[5m]))',
-        "Error rate": f'sum(rate(agno_runs_total{{{selector},status="error"}}[5m])) / clamp_min(sum(rate(agno_runs_total{{{selector}}}[5m])), 0.001)',
+        "Error rate": f'(sum(rate(agno_runs_total{{{selector},status="error"}}[5m])) or vector(0)) / clamp_min(sum(rate(agno_runs_total{{{selector}}}[5m])), 0.001)',
         "P95 duration": f'histogram_quantile(0.95, sum by (le) (rate(agno_run_duration_seconds_bucket{{{selector}}}[5m])))',
     }
     end = int(time.time())
