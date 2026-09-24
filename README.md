@@ -80,7 +80,7 @@ Bind the server ingestion ports to `observability_bind_ip`, a private interface 
 
 ## Configure the project
 
-Edit [`config.py`](config.py). Set `project_id`, `project_name`, `environment` and `agentos_url`. The URL must be reachable **from inside the panel container**; `localhost` inside that container is not the monitored host. The panel uses `/info` and `/config` when available, then falls back to `/agents`, `/teams` and `/workflows`.
+Edit [`config.py`](config.py). Set `project_id`, `project_name`, `environment` and `agentos_url`. The URL must be reachable **from inside the panel container**; `localhost` inside that container is not the monitored host. The panel uses `/info` and `/config` when available, then falls back to `/agents`, `/teams` and `/workflows`. Set `grafana_ui_url` to the URL your browser uses for Grafana when it differs from `http://localhost:3000`.
 
 For remote ingestion, set `observability_bind_ip` to the observability server's private IPv4 address and `observability_ingest_url` to the matching address without a port, for example `http://100.64.0.10`. Leave `metrics_target` and `collector_log_dir` empty if those signals are unavailable. `metrics_target` is a `host:port` address reachable from the **Alloy container beside the application**, and `collector_log_dir` is an absolute directory on the monitored host. Additional panel PromQL queries go in `metric_queries`.
 
@@ -108,7 +108,7 @@ On the machine that will run the observability server:
 docker compose -f infra/observability-server/compose.yaml --env-file .env --env-file infra/observability-server/.runtime.env up -d --build
 ```
 
-Open the panel at `http://localhost:8010` and Grafana at `http://localhost:3000`. The panel and Grafana listen on loopback. Prometheus, Loki and the Tempo OTLP receiver bind to `observability_bind_ip`; keep that address inside a private network and restrict access to the monitored hosts.
+Open the panel at `http://localhost:8010` and Grafana at `http://localhost:3000`. The panel and Grafana listen on loopback. Prometheus, Loki and the Tempo OTLP receiver bind to `observability_bind_ip`; keep that address inside a private network and restrict access to the monitored hosts. Grafana provisions a generic dashboard with run rate, error rate, duration and logs. It shows run metrics after the application calls `telemetry.record_run(...)`.
 
 After changing `config.py`, rerun `.venv/bin/python -m agno_observability_kit.configure` and rebuild the panel with `docker compose -f infra/observability-server/compose.yaml --env-file .env --env-file infra/observability-server/.runtime.env up -d --build panel`.
 
@@ -222,4 +222,4 @@ docker compose -f infra/application-collector/compose.yaml --env-file infra/appl
 docker compose -f infra/observability-server/compose.yaml -f infra/langfuse/compose.yaml --env-file .env --env-file infra/langfuse/.env --env-file infra/observability-server/.runtime.env config --quiet
 ```
 
-The panel uses only AgentOS read endpoints. Grafana's data sources are provisioned, while project-specific dashboards can be added without changing the panel.
+The panel uses only AgentOS read endpoints. It shows source status, recent logs with filters, run history and persisted session runs. Grafana's data sources and a generic dashboard are provisioned; project-specific dashboards can be added without changing the panel.
