@@ -1,7 +1,7 @@
 async function readJson(url) {
   const response = await fetch(url, { headers: { Accept: 'application/json' } });
   let body;
-  try { body = await response.json(); } catch { throw new Error(`Invalid JSON from ${url}`); }
+  try { body = await response.json(); } catch { throw new Error(`Resposta inválida de ${url}`); }
   if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
   return body;
 }
@@ -30,10 +30,10 @@ export async function startRun({ entityType, entityId, message, sessionId, signa
   if (!response.ok) {
     let detail;
     try { detail = (await response.json()).detail; } catch { /* HTTP status is enough. */ }
-    throw new Error(typeof detail === 'string' ? detail : `Run request failed (HTTP ${response.status})`);
+    throw new Error(typeof detail === 'string' ? detail : `Falha ao iniciar a execução (HTTP ${response.status})`);
   }
   if (!response.headers.get('Content-Type')?.includes('text/event-stream') || !response.body) {
-    throw new Error('The server did not return an event stream.');
+    throw new Error('O servidor não retornou um stream de eventos.');
   }
   return response;
 }

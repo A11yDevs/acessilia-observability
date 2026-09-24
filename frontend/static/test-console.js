@@ -1,5 +1,6 @@
 import { getConfig, getEntities, getRuns, getSessions, startRun } from './test-api.js';
 import { readEvents } from './sse.js';
+import { renderEntityButtons, renderSessionButtons } from './test-sidebar.js';
 
 const $ = (id) => document.getElementById(id);
 const groups = [['agents', 'Agent'], ['teams', 'Team'], ['workflows', 'Workflow']];
@@ -17,12 +18,17 @@ function text(value) {
 function setStatus(message, isError = false) {
   $('connection-status').textContent = message;
   $('connection-status').classList.toggle('error', isError);
+  $('connection-status').classList.toggle('online', !isError);
+  $('runtime-state').textContent = isError ? 'Indisponível' : 'Conectado';
+  $('runtime-dot').className = `status-dot ${isError ? 'offline' : 'online'}`;
+  $('entity-source-state').textContent = isError ? 'Indisponível' : 'AgentOS';
+  $('entity-source-state').classList.toggle('error', isError);
 }
 
 function setRunState(message, isError = false) {
   $('run-state').textContent = message;
   $('run-state').classList.toggle('error', isError);
-  $('run-state').classList.toggle('ok', message === 'Complete');
+  $('run-state').classList.toggle('ok', message === 'Concluído');
 }
 
 function emptyConversation(message) {
@@ -35,7 +41,7 @@ function emptyConversation(message) {
 function addMessage(role, content = '') {
   if ($('conversation').querySelector('.empty-state')) $('conversation').replaceChildren();
   const article = document.createElement('article');
-  article.className = `chat-message ${role === 'You' ? 'from-user' : 'from-component'}`;
+  article.className = `chat-message ${role === 'Você' ? 'from-user' : 'from-component'}`;
   const label = document.createElement('strong');
   label.textContent = role;
   const body = document.createElement('pre');
@@ -54,11 +60,11 @@ function addTimeline(name, payload = {}) {
   title.textContent = name;
   const detail = document.createElement('span');
   const context = [payload.step_name, payload.agent_name, payload.team_name].find((value) => typeof value === 'string' && value);
-  const info = payload.error || payload.reason || context || (payload.step_index != null ? `Step ${payload.step_index}` : '');
+  const info = payload.error || payload.reason || context || (payload.step_index != null ? `Etapa ${payload.step_index}` : '');
   detail.textContent = typeof info === 'string' ? info.slice(0, 300) : '';
   const time = document.createElement('time');
   const eventTime = typeof payload.created_at === 'number' ? new Date(payload.created_at * 1000) : new Date();
-  time.textContent = eventTime.toLocaleTimeString();
+  time.textContent = eventTime.toLocaleTimeString('pt-BR');
   item.append(title, detail, time);
   list.append(item);
   if (list.children.length > 100) list.firstElementChild.remove();
@@ -84,18 +90,18 @@ function numericMetrics(value, path = []) {
 function showResult(run, source) {
   $('run-details').replaceChildren();
   if (!run) {
-    $('result-note').textContent = source || 'No saved result is available yet.';
+    $('result-note').textContent = source || 'Nenhum resultado salvo ainda.';
     return;
   }
   $('result-note').textContent = source;
   const values = [
-    ['Run ID', run.run_id || run.id],
+    ['ID da execução', run.run_id || run.id],
     ['Status', run.status || run.run_status],
-    ['Duration', run.duration_ms != null ? `${run.duration_ms} ms` : null],
+    ['Duração', run.duration_ms != null ? `${run.duration_ms} ms` : null],
   ];
   for (const [label, value] of numericMetrics(run.metrics)) {
     const unit = /^(duration|time_to_first_token)$/.test(label.split(' · ').at(-1)) ? ' s' : '';
-    values.push([`Metrics · ${label}`, `${value}${unit}`]);
+    values.push([`Métrica · ${label}`, `${value}${unit}`]);
   }
   for (const [label, value] of values) {
     if (value == null || value === '') continue;
@@ -105,19 +111,21 @@ function showResult(run, source) {
     definition.textContent = String(value);
     $('run-details').append(term, definition);
   }
-  if (!$('run-details').children.length) $('result-note').textContent = 'The run completed, but no details were returned.';
+  if (!$('run-details').children.length) $('result-note').textContent = 'A execução terminou sem detalhes.';
 }
 
 function showSavedRun(index) {
   const run = state.runs[index];
   if (!run) return;
+  const status = String(run.status || run.run_status || '');
+  setRunState(/complete|success/i.test(status) ? 'Concluído' : /error|fail/i.test(status) ? 'Falhou' : 'Salva', /error|fail/i.test(status));
   $('event-timeline').replaceChildren();
   const events = Array.isArray(run.events) ? run.events : [];
   for (const event of events) {
     if (event && typeof event === 'object') addTimeline(event.event || 'Event', event);
   }
-  if (!events.length) emptyTimeline('No saved events for this run.');
-  showResult(run, 'Saved run');
+  if (!events.length) emptyTimeline('Nenhum evento salvo para esta execução.');
+  showResult(run, 'Execução salva');
 }
 
 function updateRunPicker(index = state.runs.length - 1) {
@@ -125,11 +133,25 @@ function updateRunPicker(index = state.runs.length - 1) {
   picker.replaceChildren();
   for (const [position, run] of state.runs.entries()) {
     const input = text(run.run_input ?? run.input ?? run.message).replace(/\s+/g, ' ').slice(0, 28);
-    picker.add(new Option(`Run ${position + 1}${input ? ` · ${input}` : ''}`, String(position)));
+    picker.add(new Option(`Execução ${position + 1}${input ? ` · ${input}` : ''}`, String(position)));
   }
   picker.disabled = !state.runs.length;
-  if (!state.runs.length) picker.add(new Option('No saved runs', ''));
+  if (!state.runs.length) picker.add(new Option('Nenhuma execução salva', ''));
   else picker.value = String(index);
+}
+
+function renderEntityLists() {
+  renderEntityButtons(state.entities, state.entity, Boolean(state.controller), (index) => {
+    $('entity-select').value = String(index);
+    selectEntity();
+  });
+}
+
+function renderSessionList() {
+  renderSessionButtons($('session-select').options, state.sessionId, Boolean(state.entity), Boolean(state.controller), (sessionId) => {
+    $('session-select').value = sessionId;
+    selectSession();
+  });
 }
 
 function renderHistory() {
@@ -137,16 +159,17 @@ function renderHistory() {
   $('event-timeline').replaceChildren();
   updateRunPicker();
   if (!state.runs.length) {
-    emptyConversation('No saved runs in this session. Send a message to begin.');
-    showResult(null, 'No saved run yet.');
-    emptyTimeline('No saved events in this session.');
+    setRunState('Aguardando');
+    emptyConversation('Nenhuma execução salva nesta sessão. Envie uma mensagem para começar.');
+    showResult(null, 'Nenhuma execução salva ainda.');
+    emptyTimeline('Nenhum evento salvo nesta sessão.');
     return;
   }
   for (const run of state.runs) {
     const input = text(run.run_input ?? run.input ?? run.message ?? run.input_content);
     const output = text(run.content ?? run.output ?? run.response);
-    if (input) addMessage('You', input);
-    if (output) addMessage(state.entity?.name || 'Response', output);
+    if (input) addMessage('Você', input);
+    if (output) addMessage(state.entity?.name || 'Resposta', output);
   }
   showSavedRun(state.runs.length - 1);
 }
@@ -164,17 +187,36 @@ async function loadRuns() {
     if (state.sessionId !== sessionId || state.entity !== entity) return;
     state.runs = [];
     updateRunPicker();
-    emptyConversation(`Session history is unavailable: ${error.message}`);
-    emptyTimeline('Saved events are unavailable.');
-    showResult(null, 'No saved run is available.');
+    emptyConversation(`Histórico da sessão indisponível: ${error.message}`);
+    emptyTimeline('Eventos salvos indisponíveis.');
+    showResult(null, 'Nenhuma execução salva disponível.');
+    setRunState('Indisponível', true);
+  }
+}
+
+async function selectSession() {
+  state.sessionId = $('session-select').value;
+  $('session-pill').textContent = state.sessionId ? `Sessão ${state.sessionId.slice(0, 12)}` : 'Sem sessão';
+  state.runs = [];
+  updateRunPicker();
+  renderSessionList();
+  if (state.sessionId) await loadRuns();
+  else {
+    emptyConversation('Envie uma mensagem para iniciar uma conversa.');
+    emptyTimeline('Os eventos aparecerão durante a execução.');
+    showResult(null, 'Nenhuma execução ainda.');
+    setRunState('Aguardando');
   }
 }
 
 async function loadSessions() {
   const picker = $('session-select');
-  picker.replaceChildren(new Option('New conversation', ''));
+  picker.replaceChildren(new Option('Nova conversa', ''));
   picker.disabled = !state.entity || Boolean(state.controller);
-  if (!state.entity) return;
+  if (!state.entity) {
+    renderSessionList();
+    return;
+  }
   const entity = state.entity;
   try {
     const result = await getSessions(entity.type, entity.id);
@@ -184,15 +226,16 @@ async function loadSessions() {
       if (!id) continue;
       picker.add(new Option(session.session_name || String(id), String(id)));
     }
-    $('session-note').textContent = 'Choose an existing session or start a new one.';
+    $('session-note').textContent = 'Escolha uma sessão existente ou inicie uma nova.';
   } catch (error) {
     if (state.entity !== entity) return;
-    $('session-note').textContent = `Saved sessions unavailable: ${error.message}`;
+    $('session-note').textContent = `Sessões salvas indisponíveis: ${error.message}`;
   }
   if (state.sessionId && !Array.from(picker.options).some((option) => option.value === state.sessionId)) {
-    picker.add(new Option(`Current session · ${state.sessionId}`, state.sessionId));
+    picker.add(new Option(`Sessão atual · ${state.sessionId}`, state.sessionId));
   }
   picker.value = state.sessionId;
+  renderSessionList();
 }
 
 async function selectEntity() {
@@ -202,11 +245,15 @@ async function selectEntity() {
   updateRunPicker();
   $('message').disabled = !state.entity;
   $('send-message').disabled = !state.entity;
-  $('target-note').textContent = state.entity ? `${state.entity.type} · ${state.entity.id}` : 'No component selected.';
-  emptyConversation(state.entity ? 'Send a message to start a new conversation.' : 'Choose a component to begin.');
-  emptyTimeline('Events will appear during a run.');
-  showResult(null, 'No run yet.');
-  setRunState('Idle');
+  $('new-session').disabled = !state.entity;
+  $('conversation-heading').textContent = state.entity?.name || 'Selecione uma entidade';
+  $('session-pill').textContent = 'Sem sessão';
+  $('target-note').textContent = state.entity ? `${state.entity.type} · ${state.entity.id}` : 'Nenhum componente selecionado.';
+  emptyConversation(state.entity ? 'Envie uma mensagem para iniciar uma conversa.' : 'Selecione uma entidade para começar.');
+  emptyTimeline('Os eventos aparecerão durante a execução.');
+  showResult(null, 'Nenhuma execução ainda.');
+  setRunState('Aguardando');
+  renderEntityLists();
   await loadSessions();
 }
 
@@ -226,7 +273,7 @@ async function loadTargets() {
       const items = discovery[key] || [];
       if (!items.length) continue;
       const group = document.createElement('optgroup');
-      group.label = `${label}s`;
+      group.label = { agents: 'Agentes', teams: 'Times', workflows: 'Workflows' }[key];
       for (const entity of items) group.append(new Option(entity.name || entity.id, String(offset++)));
       picker.append(group);
     }
@@ -234,16 +281,20 @@ async function loadTargets() {
     if (state.entities.length) {
       const selected = state.entities.findIndex((entity) => entity.id === previous?.id && entity.type === previous?.type);
       picker.value = String(selected >= 0 ? selected : 0);
-      setStatus(`${state.entities.length} components available`);
+      $('entity-count').textContent = `${state.entities.length} componente(s)`;
+      setStatus(`${state.entities.length} componente(s) disponível(is)`);
     } else {
-      picker.add(new Option('No components found', ''));
-      setStatus('AgentOS returned no agents, teams or workflows.');
+      picker.add(new Option('Nenhum componente encontrado', ''));
+      $('entity-count').textContent = 'Nenhuma entidade';
+      setStatus('AgentOS não retornou agentes, times ou workflows.');
     }
     await selectEntity();
     if (previousSessionId && state.entity?.id === previous?.id && state.entity?.type === previous?.type) {
       state.sessionId = previousSessionId;
       await loadSessions();
       await loadRuns();
+      $('session-pill').textContent = `Sessão ${state.sessionId.slice(0, 12)}`;
+      renderSessionList();
     }
   } catch (error) {
     state.entities = [];
@@ -251,15 +302,21 @@ async function loadTargets() {
     state.sessionId = '';
     state.runs = [];
     updateRunPicker();
-    $('entity-select').replaceChildren(new Option('Discovery unavailable', ''));
+    $('entity-select').replaceChildren(new Option('Descoberta indisponível', ''));
     $('entity-select').disabled = true;
-    $('session-select').replaceChildren(new Option('New conversation', ''));
+    $('session-select').replaceChildren(new Option('Nova conversa', ''));
     $('session-select').disabled = true;
     $('message').disabled = true;
     $('send-message').disabled = true;
-    emptyConversation('Choose a component to begin.');
-    emptyTimeline('Events will appear during a run.');
-    showResult(null, 'No run yet.');
+    $('entity-count').textContent = 'Indisponível';
+    $('new-session').disabled = true;
+    $('conversation-heading').textContent = 'Selecione uma entidade';
+    $('session-pill').textContent = 'Sem sessão';
+    renderEntityLists();
+    renderSessionList();
+    emptyConversation('Selecione uma entidade para começar.');
+    emptyTimeline('Os eventos aparecerão durante a execução.');
+    showResult(null, 'Nenhuma execução ainda.');
     setStatus(error.message, true);
   } finally {
     $('reload-targets').disabled = false;
@@ -274,7 +331,7 @@ function handleFrame(frame, answer) {
   const name = frame.event === 'message' ? payload.event || 'message' : frame.event;
   if (payload.session_id && !state.sessionId) state.sessionId = String(payload.session_id);
   if (payload.run_id) state.runId = String(payload.run_id);
-  if (name === 'error') throw new Error(payload.error || payload.detail || 'The proxy stopped the run.');
+  if (name === 'error') throw new Error(payload.error || payload.detail || 'O proxy interrompeu a execução.');
   if (['RunContent', 'WorkflowRunContent', 'TeamRunContent'].includes(name)) {
     if (typeof payload.content === 'string') answer.textContent += payload.content;
     return;
@@ -301,20 +358,24 @@ async function submitMessage(event) {
   $('send-message').disabled = true;
   $('session-select').disabled = true;
   $('entity-select').disabled = true;
+  $('new-session').disabled = true;
   $('reload-targets').disabled = true;
   $('run-select').disabled = true;
   $('stop-run').hidden = false;
   $('event-timeline').replaceChildren();
-  addMessage('You', message);
-  const answer = addMessage(state.entity.name || 'Response', '');
-  showResult(null, 'Waiting for the run to finish…');
-  setRunState('Running');
+  addMessage('Você', message);
+  const answer = addMessage(state.entity.name || 'Resposta', '');
+  showResult(null, 'Aguardando o fim da execução…');
+  setRunState('Executando');
+  renderEntityLists();
+  renderSessionList();
   try {
     const response = await startRun({ entityType: state.entity.type, entityId: state.entity.id, message, sessionId: state.sessionId, signal: state.controller.signal });
     state.sessionId = response.headers.get('X-Session-Id') || state.sessionId;
+    $('session-pill').textContent = state.sessionId ? `Sessão ${state.sessionId.slice(0, 12)}` : 'Sem sessão';
     for await (const frame of readEvents(response)) handleFrame(frame, answer);
-    setRunState(state.failed ? 'Needs attention' : 'Complete', state.failed);
-    if (state.finalEvent) showResult(state.finalEvent, 'Streamed result');
+    setRunState(state.failed ? 'Atenção' : 'Concluído', state.failed);
+    if (state.finalEvent) showResult(state.finalEvent, 'Resultado em tempo real');
     if (state.sessionId) {
       try {
         const runs = await getRuns(state.sessionId, state.entity.type);
@@ -327,46 +388,41 @@ async function submitMessage(event) {
           showSavedRun(savedIndex);
           if (!answer.textContent) answer.textContent = text(saved.content ?? saved.output ?? saved.response);
         } else if (!state.finalEvent) {
-          showResult(null, 'No saved run was returned by AgentOS.');
+          showResult(null, 'O AgentOS não retornou uma execução salva.');
         }
-      } catch { if (!state.finalEvent) showResult(null, 'Session history is unavailable.'); }
+      } catch { if (!state.finalEvent) showResult(null, 'Histórico da sessão indisponível.'); }
     }
-    if (!answer.textContent) answer.textContent = state.failed ? 'Run ended without a response.' : 'No text response was returned.';
+    if (!answer.textContent) answer.textContent = state.failed ? 'A execução terminou sem resposta.' : 'Nenhuma resposta em texto foi retornada.';
   } catch (error) {
     if (error.name === 'AbortError') {
-      setRunState('Stream closed');
-      addTimeline('Stream closed', { reason: 'The AgentOS run may continue.' });
+      setRunState('Stream fechado');
+      addTimeline('Stream fechado', { reason: 'A execução no AgentOS pode continuar.' });
     } else {
-      setRunState('Failed', true);
-      addTimeline('Error', { error: error.message });
+      setRunState('Falhou', true);
+      addTimeline('Erro', { error: error.message });
       showResult(null, error.message);
     }
-    if (!answer.textContent) answer.textContent = 'No response.';
+    if (!answer.textContent) answer.textContent = 'Sem resposta.';
   } finally {
     state.controller = null;
     $('message').disabled = false;
     $('send-message').disabled = false;
     $('entity-select').disabled = false;
+    $('new-session').disabled = false;
     $('reload-targets').disabled = false;
     $('run-select').disabled = !state.runs.length;
     $('stop-run').hidden = true;
     await loadSessions();
+    renderEntityLists();
     $('message').focus();
   }
 }
 
 $('entity-select').addEventListener('change', selectEntity);
-$('session-select').addEventListener('change', async () => {
-  state.sessionId = $('session-select').value;
-  state.runs = [];
-  updateRunPicker();
-  if (state.sessionId) await loadRuns();
-  else {
-    emptyConversation('Send a message to start a new conversation.');
-    emptyTimeline('Events will appear during a run.');
-    showResult(null, 'No run yet.');
-    setRunState('Idle');
-  }
+$('session-select').addEventListener('change', selectSession);
+$('new-session').addEventListener('click', () => { $('session-select').value = ''; selectSession(); });
+$('clear-chat').addEventListener('click', () => {
+  if (!state.controller) emptyConversation('Conversa limpa da tela. O histórico salvo continua disponível na sessão.');
 });
 $('run-select').addEventListener('change', () => showSavedRun(Number($('run-select').value)));
 $('reload-targets').addEventListener('click', loadTargets);
@@ -381,12 +437,20 @@ $('stop-run').addEventListener('click', () => state.controller?.abort());
 
 try {
   const config = await getConfig();
-  $('project-name').textContent = config.project_name || config.project_id || 'Observability';
-  $('environment').textContent = config.environment || 'Environment unknown';
-  document.title = `Test console · ${config.project_name || 'Observability'}`;
+  $('project-name').textContent = config.project_name || config.project_id || 'Observabilidade';
+  $('brand-name').textContent = config.project_name || 'Observabilidade';
+  $('environment').textContent = config.environment || 'Ambiente desconhecido';
+  $('grafana-link').href = `${config.grafana_ui_url.replace(/\/$/, '')}/d/agno-observability/agno-observability`;
+  $('langfuse-link').hidden = !config.langfuse_ui_url;
+  if (config.langfuse_ui_url) $('langfuse-link').href = config.langfuse_ui_url;
+  document.title = `Console Agno · ${config.project_name || 'Observabilidade'}`;
   if (config.configured) await loadTargets();
   else {
-    $('entity-select').replaceChildren(new Option('Connect AgentOS first', ''));
-    setStatus('Set agentos_url in config.py to connect an AgentOS instance.', true);
+    $('entity-select').replaceChildren(new Option('Conecte o AgentOS primeiro', ''));
+    $('entity-count').textContent = 'Não configurado';
+    renderEntityLists();
+    renderSessionList();
+    setStatus('Configure agentos_url em config.py para conectar o AgentOS.', true);
+    $('runtime-state').textContent = 'Não configurado';
   }
 } catch (error) { setStatus(error.message, true); }
