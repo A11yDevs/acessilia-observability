@@ -63,8 +63,9 @@ def configure_agno_telemetry(
         from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace import SpanProcessor
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
-        from opentelemetry.trace import ProxyTracerProvider
+        from opentelemetry.trace import ProxyTracerProvider, StatusCode
     except ImportError as exc:
         raise RuntimeError("Install the optional telemetry dependencies with: pip install 'agno-observability-kit[telemetry]'") from exc
 
@@ -73,15 +74,41 @@ def configure_agno_telemetry(
 
     resource = Resource.create({"service.name": service_name, "project_id": project_id, "environment": environment})
     endpoint = collector_url.rstrip("/")
-    tracer_provider = TracerProvider(resource=resource)
-    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{endpoint}/v1/traces")))
-    AgnoInstrumentor().instrument(tracer_provider=tracer_provider)
-    trace.set_tracer_provider(tracer_provider)
 
     metric_reader = PeriodicExportingMetricReader(OTLPMetricExporter(endpoint=f"{endpoint}/v1/metrics"))
     meter_provider = MeterProvider(resource=resource, metric_readers=[metric_reader])
+    meter = meter_provider.get_meter("agno_observability_kit")
+    run_counter = meter.create_counter("agno_runs", description="Completed agent, team and workflow runs")
+    run_duration = meter.create_histogram("agno_run_duration_seconds", unit="s", description="Agent, team and workflow run duration")
+
+    class RunMetricSpanProcessor(SpanProcessor):
+        def on_end(self, span: Any) -> None:
+            if span.instrumentation_scope.name != "openinference.instrumentation.agno":
+                return
+            attributes = span.attributes or {}
+            kind = attributes.get("openinference.span.kind")
+            if kind == "AGENT":
+                component_type = "team" if "agno.team" in attributes else "agent"
+            elif kind == "CHAIN" and span.name.rsplit(".", 1)[-1] in {
+                "run", "arun", "run_stream", "arun_stream", "continue_run", "acontinue_run"
+            }:
+                component_type = "workflow"
+            else:
+                return
+            if span.status.status_code not in {StatusCode.OK, StatusCode.ERROR}:
+                return
+            if span.start_time is None or span.end_time is None or span.end_time < span.start_time:
+                return
+            labels = {"component_type": component_type, "status": "error" if span.status.status_code == StatusCode.ERROR else "ok"}
+            run_counter.add(1, labels)
+            run_duration.record((span.end_time - span.start_time) / 1_000_000_000, labels)
+
+    tracer_provider = TracerProvider(resource=resource)
+    tracer_provider.add_span_processor(RunMetricSpanProcessor())
+    tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{endpoint}/v1/traces")))
+    AgnoInstrumentor().instrument(tracer_provider=tracer_provider)
+    trace.set_tracer_provider(tracer_provider)
     metrics.set_meter_provider(meter_provider)
-    meter = metrics.get_meter("agno_observability_kit")
 
     logger_provider = LoggerProvider(resource=resource)
     logger_provider.add_log_record_processor(BatchLogRecordProcessor(OTLPLogExporter(endpoint=f"{endpoint}/v1/logs")))
@@ -93,6 +120,6 @@ def configure_agno_telemetry(
         tracer_provider=tracer_provider,
         meter_provider=meter_provider,
         logger_provider=logger_provider,
-        run_counter=meter.create_counter("agno_runs", description="Completed agent, team and workflow runs"),
-        run_duration=meter.create_histogram("agno_run_duration_seconds", unit="s", description="Agent, team and workflow run duration"),
+        run_counter=run_counter,
+        run_duration=run_duration,
     )

@@ -29,7 +29,9 @@ class TelemetryTests(unittest.TestCase):
         thread.start()
         script = """
 import logging
+from agno.workflow import Workflow
 from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
 from agno_observability_kit.instrumentation.agno import configure_agno_telemetry
 
 telemetry = configure_agno_telemetry(
@@ -38,7 +40,20 @@ telemetry = configure_agno_telemetry(
 )
 with trace.get_tracer("test").start_as_current_span("sample-run"):
     logging.getLogger("sample.app").warning("run complete", extra={"run_id": "run-1"})
-    telemetry.record_run(component_type="agent", status="ok", duration_seconds=0.1)
+instrumentor = trace.get_tracer("openinference.instrumentation.agno")
+with instrumentor.start_as_current_span("Helper.run", attributes={"openinference.span.kind": "AGENT"}) as span:
+    span.set_status(Status(StatusCode.OK))
+with instrumentor.start_as_current_span("Team.arun", attributes={"openinference.span.kind": "AGENT", "agno.team": ""}) as span:
+    span.set_status(Status(StatusCode.ERROR))
+with instrumentor.start_as_current_span("Workflow.run", attributes={"openinference.span.kind": "CHAIN"}) as span:
+    span.set_status(Status(StatusCode.OK))
+with instrumentor.start_as_current_span("Step.execute", attributes={"openinference.span.kind": "CHAIN"}) as span:
+    span.set_status(Status(StatusCode.OK))
+with instrumentor.start_as_current_span("Incomplete.run", attributes={"openinference.span.kind": "AGENT"}):
+    pass
+with trace.get_tracer("other.instrumentation").start_as_current_span("Other.run", attributes={"openinference.span.kind": "AGENT"}) as span:
+    span.set_status(Status(StatusCode.OK))
+Workflow(name="Offline", steps=[]).run(input="hello")
 assert telemetry.flush()
 try:
     configure_agno_telemetry(service_name="test", project_id="sample", environment="test")
@@ -62,13 +77,26 @@ else:
         traces = ExportTraceServiceRequest.FromString(received["/v1/traces"])
         metrics = ExportMetricsServiceRequest.FromString(received["/v1/metrics"])
         logs = ExportLogsServiceRequest.FromString(received["/v1/logs"])
-        self.assertEqual(traces.resource_spans[0].scope_spans[0].spans[0].name, "sample-run")
+        span_names = {span.name for group in traces.resource_spans[0].scope_spans for span in group.spans}
+        self.assertIn("sample-run", span_names)
+        self.assertIn("Offline.run", span_names)
         resource = {item.key: item.value.string_value for item in traces.resource_spans[0].resource.attributes}
         self.assertEqual(resource["service.name"], "test-agentos")
         self.assertEqual(resource["project_id"], "sample")
-        metric_names = {item.name for scope in metrics.resource_metrics[0].scope_metrics for item in scope.metrics}
-        self.assertIn("agno_runs", metric_names)
-        self.assertIn("agno_run_duration_seconds", metric_names)
+        exported_metrics = {item.name: item for scope in metrics.resource_metrics[0].scope_metrics for item in scope.metrics}
+        self.assertIn("agno_runs", exported_metrics)
+        self.assertIn("agno_run_duration_seconds", exported_metrics)
+        counts = {
+            tuple(sorted((attribute.key, attribute.value.string_value) for attribute in point.attributes)): point.as_int
+            for point in exported_metrics["agno_runs"].sum.data_points
+        }
+        self.assertEqual(counts, {
+            (("component_type", "agent"), ("status", "ok")): 1,
+            (("component_type", "team"), ("status", "error")): 1,
+            (("component_type", "workflow"), ("status", "ok")): 2,
+        })
+        durations = exported_metrics["agno_run_duration_seconds"].histogram.data_points
+        self.assertEqual(sum(point.count for point in durations), 4)
         record = logs.resource_logs[0].scope_logs[0].log_records[0]
         self.assertTrue(record.trace_id)
         self.assertIn("run_id", {item.key for item in record.attributes})

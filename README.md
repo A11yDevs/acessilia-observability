@@ -160,18 +160,19 @@ telemetry = configure_agno_telemetry(
 # Create the existing AgentOS app below this line. Keep its own persistence setup.
 ```
 
-The helper exports Agno spans through OpenInference, attaches one OTLP logging handler to each named Python logger, and creates a meter. Record application-level run metrics where the caller has timing and status:
+The helper exports Agno spans through OpenInference and attaches one OTLP logging handler to each named Python logger. Completed agent, team and workflow runs automatically produce count and duration metrics. Metrics have only `component_type` and `status` labels. Status follows the OpenInference span: an exception marks a run as `error`, while a failure returned as a normal result may still appear as `ok`. Avoid calling `record_run()` for traced runs, since that would count them twice. The method remains available for a custom execution that Agno does not trace.
+
+Add application logs where useful:
 
 ```python
 import logging
 
-telemetry.record_run(component_type="agent", status="ok", duration_seconds=1.2)
 logger = logging.getLogger("my_application")
 logger.setLevel(logging.INFO)
 logger.info("run complete", extra={"run_id": "run-123", "session_id": "session-456"})
 ```
 
-Use actual run and session IDs from the application. `run_id` and `session_id` belong in traces and logs, never in metric labels. Logs written while a span is active also carry its trace and span IDs. Call `telemetry.flush()` during a controlled shutdown if the process may exit before batched signals are sent. OTLP HTTP sends traces, metrics and logs to `/v1/traces`, `/v1/metrics` and `/v1/logs` on the collector.
+Use actual run and session IDs from the application. `run_id` and `session_id` belong in traces and logs, never in metric labels. Logs written while a span is active also carry its trace and span IDs. Streaming metrics appear when the stream is consumed or closed. Call `telemetry.flush()` during a controlled shutdown if the process may exit before batched signals are sent. OTLP HTTP sends traces, metrics and logs to `/v1/traces`, `/v1/metrics` and `/v1/logs` on the collector.
 
 Agno tracing is process-wide. If `AgentOS(tracing=True)` or another tracer provider is already active, this helper raises an error instead of replacing it; configure an exporter on the existing provider and instrument Agno there. Set up one tracer provider before AgentOS starts. Traces can include prompts or responses, so review application data before enabling external export. See the [Agno tracing guide](https://docs.agno.com/tracing/overview) and [OpenTelemetry Python exporter guide](https://opentelemetry.io/docs/languages/python/exporters/).
 
