@@ -66,7 +66,7 @@ async function loadStatus() {
       const title = document.createElement('strong');
       title.textContent = name === 'agentos' ? 'AgentOS' : name[0].toUpperCase() + name.slice(1);
       const state = document.createElement('span');
-      state.className = `source-state ${source.state === 'connected' ? 'ok' : source.state === 'unavailable' ? 'error' : ''}`;
+      state.className = `source-state ${['connected', 'delivered'].includes(source.state) ? 'ok' : ['unavailable', 'degraded'].includes(source.state) ? 'error' : ''}`;
       state.textContent = source.state.replace('_', ' ');
       const detail = document.createElement('small');
       detail.textContent = source.last_seen ? `Last data: ${new Date(source.last_seen).toLocaleString()}` : source.detail;
