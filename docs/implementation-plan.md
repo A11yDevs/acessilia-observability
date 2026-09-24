@@ -2,6 +2,18 @@
 
 The kit monitors one Agno project per installation. AgentOS supplies component and session data through its HTTP API. An optional Alloy collector beside the application sends telemetry to Prometheus, Loki, Tempo and, when configured, Langfuse. The panel reads those services; the monitored application does not import panel code or share its filesystem.
 
+## Current progress
+
+| Phase | Implemented | Validation still needed |
+| --- | --- | --- |
+| 1. Real AgentOS connection | Configurable API adapter, project settings and connection guide | Connect a real Agno 3.x AgentOS instance with persisted runs and authentication |
+| 2. Application instrumentation | Optional Agno/OpenTelemetry setup, OTLP trace, metric and log export, local receiver test | Verify spans from an actual Agno run in another application |
+| 3. Remote deployment | Separate Compose stacks, private interface binds, SSH access guide, connection checks | Exercise two machines or isolated networks with private routing, failure and restart behavior |
+| 4. Panel and Grafana | Source states, bounded history and log filters, session runs, trace links and provisioned dashboard | Check real telemetry, partial outages and AgentOS response variations |
+| 5. Optional Langfuse | Separate services, Alloy fan-out, credentials outside generated files, smoke command and synthetic outage check | Use real project keys and confirm the same Agno run in Tempo and Langfuse |
+
+The local OTLP and Alloy tests use synthetic signals. They confirm exporter wiring and failure isolation but do not prove a deployment against a live AgentOS or Langfuse project.
+
 ## 1. Prepare and validate a real AgentOS connection
 
 **Current state:** `config.py` already accepts the AgentOS URL, project identity and private network addresses. The panel discovers components through `/info` and `/config`, falling back to list endpoints. The README now gives a short two-machine connection procedure. The API client has been exercised with simulated AgentOS responses, and the collector with synthetic OTLP traffic; there is no available live Agno application for this phase.
