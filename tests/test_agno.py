@@ -57,11 +57,12 @@ class AgnoTests(unittest.TestCase):
         def handle(request):
             self.assertEqual(request.url.params.get("type"), "workflow")
             if request.url.path == "/sessions":
+                self.assertEqual(request.url.params.get("component_id"), "echo")
                 return httpx.Response(200, json={"data": [{"session_id": "s1"}], "meta": {"page": 1}})
             return httpx.Response(200, json=[{"run_id": "r1"}])
 
         client = AgnoClient("http://agent.test", transport=httpx.MockTransport(handle))
-        self.assertEqual(asyncio.run(client.sessions("workflow"))["data"][0]["session_id"], "s1")
+        self.assertEqual(asyncio.run(client.sessions("workflow", component_id="echo"))["data"][0]["session_id"], "s1")
         self.assertEqual(asyncio.run(client.session_runs("s1", "workflow"))[0]["run_id"], "r1")
 
 

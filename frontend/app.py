@@ -15,6 +15,7 @@ from agno_observability_kit.integrations.loki import recent_logs
 from agno_observability_kit.integrations.prometheus import query_history, query_metrics
 from agno_observability_kit.settings import ProjectConfig
 from agno_observability_kit.status import source_status
+from frontend.test_console import test_console_routes
 
 
 STATIC = Path(__file__).parent / "static"
@@ -23,6 +24,7 @@ STATIC = Path(__file__).parent / "static"
 def create_app(config: ProjectConfig = CONFIG) -> FastAPI:
     app = FastAPI(title=f"{config.project_name} Observability")
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
+    app.include_router(test_console_routes(config, lambda: os.getenv("AGENTOS_TOKEN", "")))
 
     def agno() -> AgnoClient:
         if not config.agentos_url:
@@ -41,6 +43,10 @@ def create_app(config: ProjectConfig = CONFIG) -> FastAPI:
     @app.get("/", include_in_schema=False)
     async def home():
         return FileResponse(STATIC / "index.html")
+
+    @app.get("/test", include_in_schema=False)
+    async def test_console():
+        return FileResponse(STATIC / "test.html")
 
     @app.get("/api/config")
     async def public_config():
@@ -62,9 +68,12 @@ def create_app(config: ProjectConfig = CONFIG) -> FastAPI:
         return await agno().discover()
 
     @app.get("/api/sessions")
-    async def sessions(type: str = "agent", limit: int = Query(20, ge=1, le=100)):
+    async def sessions(
+        type: str = "agent", limit: int = Query(20, ge=1, le=100),
+        component_id: str = Query("", max_length=200),
+    ):
         try:
-            return await agno().sessions(type, limit)
+            return await agno().sessions(type, limit, component_id)
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
 

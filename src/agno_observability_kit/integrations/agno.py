@@ -58,9 +58,12 @@ class AgnoClient:
             result[kind] = [_entity(item, kind) for item in items if isinstance(item, dict)]
         return result
 
-    async def sessions(self, kind: str, limit: int = 20) -> dict[str, Any]:
+    async def sessions(self, kind: str, limit: int = 20, component_id: str = "") -> dict[str, Any]:
         _check_kind(kind)
-        payload = await self.get("/sessions", params={"type": kind, "limit": limit})
+        params: dict[str, Any] = {"type": kind, "limit": limit}
+        if component_id:
+            params["component_id"] = component_id
+        payload = await self.get("/sessions", params=params)
         if isinstance(payload, list):
             return {"data": payload, "meta": {}}
         if isinstance(payload, dict) and isinstance(payload.get("data"), list):
@@ -95,4 +98,3 @@ def _entity(item: dict[str, Any], kind: str) -> dict[str, str]:
     singular = kind[:-1] if kind != "workflows" else "workflow"
     identifier = item.get("id") or item.get(f"{singular}_id") or item.get("name") or "unknown"
     return {"id": str(identifier), "name": str(item.get("name") or identifier), "type": singular}
-
