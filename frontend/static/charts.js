@@ -1,4 +1,5 @@
 const SVG = 'http://www.w3.org/2000/svg';
+const names = { 'Run rate': 'Execuções por segundo', 'Error rate': 'Taxa de erro', 'P95 duration': 'Duração P95' };
 
 export function renderHistory(target, series) {
   target.replaceChildren();
@@ -6,11 +7,11 @@ export function renderHistory(target, series) {
     const section = document.createElement('section');
     section.className = 'chart';
     const heading = document.createElement('h3');
-    heading.textContent = name;
+    heading.textContent = names[name] || name;
     section.append(heading);
     if (!samples.length) {
       const empty = document.createElement('small');
-      empty.textContent = 'No run metrics in this range';
+      empty.textContent = 'Sem métricas neste período';
       section.append(empty);
       target.append(section);
       continue;
@@ -28,14 +29,14 @@ export function renderHistory(target, series) {
     svg.setAttribute('viewBox', '0 0 100 100');
     svg.setAttribute('preserveAspectRatio', 'none');
     svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', `${name}: ${samples.length} points, latest ${values.at(-1).toFixed(2)}`);
+    svg.setAttribute('aria-label', `${names[name] || name}: ${samples.length} pontos; valor recente ${values.at(-1).toFixed(2)}`);
     const line = document.createElementNS(SVG, 'polyline');
     line.setAttribute('class', 'chart-line');
     line.setAttribute('points', points);
     svg.append(line);
     const latest = document.createElement('small');
     const value = name === 'Error rate' ? `${(values.at(-1) * 100).toFixed(1)}%` : `${values.at(-1).toFixed(2)} ${name === 'Run rate' ? 'runs/s' : 's'}`;
-    latest.textContent = `Latest: ${value}`;
+    latest.textContent = `Atual: ${value}`;
     section.append(svg, latest);
     target.append(section);
   }
