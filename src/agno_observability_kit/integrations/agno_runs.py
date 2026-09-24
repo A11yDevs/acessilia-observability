@@ -46,6 +46,9 @@ async def stream_run(
                     else:
                         yield _error(f"AgentOS returned HTTP {response.status_code}")
                     return
+                if "text/event-stream" not in response.headers.get("content-type", ""):
+                    yield _error("AgentOS did not return an event stream")
+                    return
                 async for chunk in response.aiter_bytes():
                     yield chunk
     except httpx.HTTPError as exc:

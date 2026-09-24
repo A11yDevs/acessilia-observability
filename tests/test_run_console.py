@@ -58,6 +58,21 @@ class RunConsoleTests(unittest.TestCase):
         self.assertIn(b"rejected the execution credential", output)
         self.assertNotIn(b"private detail", output)
 
+    def test_rejects_non_stream_response(self):
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, json={"content": "unexpected"}))
+
+        async def collect():
+            return b"".join([
+                chunk async for chunk in stream_run(
+                    "http://agent.test", "", "agent", "echo", "Hi", "s1", transport
+                )
+            ])
+
+        output = asyncio.run(collect())
+        self.assertIn(b"event: error", output)
+        self.assertIn(b"did not return an event stream", output)
+        self.assertNotIn(b"unexpected", output)
+
     def test_endpoint_requires_agentos_and_validates_request(self):
         app = create_app(ProjectConfig())
 
