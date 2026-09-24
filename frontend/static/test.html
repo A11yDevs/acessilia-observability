@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test console · Observability</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/test.css">
+  <script src="/static/test-console.js" type="module"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand console-brand" href="/"><span class="brand-mark" aria-hidden="true">◎</span> AGNO OBSERVABILITY KIT</a>
+    <nav class="console-nav" aria-label="Main navigation"><a href="/">Overview</a><span aria-current="page">Test console</span></nav>
+    <span id="environment" class="badge">Loading</span>
+  </header>
+  <main class="console-main">
+    <div class="console-intro">
+      <div><p class="eyebrow">AGENTOS · LIVE TEST</p><h1>Test console</h1><p id="project-name" class="muted">Connecting to project…</p></div>
+      <p id="connection-status" class="console-status" role="status" aria-live="polite">Discovering components…</p>
+    </div>
+    <div class="console-layout">
+      <aside class="console-sidebar" aria-label="Test setup">
+        <section class="card console-card" aria-labelledby="target-heading">
+          <div class="card-head"><h2 id="target-heading">Target</h2><button id="reload-targets" type="button" class="quiet-button">Refresh</button></div>
+          <label for="entity-select">Agent, team or workflow</label>
+          <select id="entity-select" disabled><option value="">Loading components…</option></select>
+          <p id="target-note" class="muted console-note">Components are discovered from AgentOS.</p>
+        </section>
+        <section class="card console-card" aria-labelledby="session-heading">
+          <div class="card-head"><h2 id="session-heading">Session</h2></div>
+          <label for="session-select">Conversation</label>
+          <select id="session-select" disabled><option value="">New conversation</option></select>
+          <p id="session-note" class="muted console-note">Choose an existing session or start a new one.</p>
+        </section>
+      </aside>
+      <section class="card chat-panel" aria-labelledby="conversation-heading">
+        <div class="card-head chat-head"><h2 id="conversation-heading">Conversation</h2><span id="run-state" class="status">Idle</span></div>
+        <div id="conversation" class="conversation" role="log" aria-label="Conversation" aria-live="polite" aria-relevant="additions text">
+          <p class="empty-state">Choose a component to begin. A new session starts with the first message.</p>
+        </div>
+        <form id="message-form" class="message-form">
+          <label for="message">Message</label>
+          <textarea id="message" rows="3" maxlength="20000" placeholder="Ask the selected component…" required disabled></textarea>
+          <div class="message-actions"><span class="muted">Enter to send · Shift+Enter for a new line</span><div><button id="stop-run" type="button" class="quiet-button" hidden>Close stream</button><button id="send-message" type="submit" disabled>Send message</button></div></div>
+        </form>
+      </section>
+      <aside class="card activity-panel" aria-labelledby="activity-heading">
+        <div class="card-head"><h2 id="activity-heading">Run activity</h2><span class="source">Live events</span></div>
+        <label for="run-select">Saved run</label>
+        <select id="run-select" disabled><option value="">No saved runs</option></select>
+        <ol id="event-timeline" class="event-timeline" aria-label="Run events"><li class="empty-state">Events will appear during a run.</li></ol>
+        <div class="result-section" aria-labelledby="result-heading">
+          <h3 id="result-heading">Latest result</h3>
+          <p id="result-note" class="muted">No run yet.</p>
+          <dl id="run-details" class="run-details"></dl>
+        </div>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>
