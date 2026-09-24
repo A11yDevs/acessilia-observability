@@ -175,6 +175,16 @@ Use actual run and session IDs from the application. `run_id` and `session_id` b
 
 Agno tracing is process-wide. If `AgentOS(tracing=True)` or another tracer provider is already active, this helper raises an error instead of replacing it; configure an exporter on the existing provider and instrument Agno there. Set up one tracer provider before AgentOS starts. Traces can include prompts or responses, so review application data before enabling external export. See the [Agno tracing guide](https://docs.agno.com/tracing/overview) and [OpenTelemetry Python exporter guide](https://opentelemetry.io/docs/languages/python/exporters/).
 
+To try a standalone AgentOS application with a local SQLite database, install Agno's API and model packages, then start the [example](examples/agentos_app.py):
+
+```sh
+.venv/bin/pip install -e '.[telemetry]' 'agno[os,openai]>=3,<4'
+OTLP_COLLECTOR_URL=http://127.0.0.1:4318 PROJECT_ID=example ENVIRONMENT=local \
+  .venv/bin/uvicorn --app-dir examples agentos_app:app --host 127.0.0.1 --port 7777
+```
+
+Leave `OTLP_COLLECTOR_URL` unset to start the example without Alloy. `curl -fsS http://127.0.0.1:7777/info` and `/config` check discovery without calling a model. Set `AGENTOS_DB_FILE` to choose the SQLite path. Running the example agent requires a configured model provider; Agno uses OpenAI by default. The example does not depend on the panel or server Compose stack.
+
 ## Optional Langfuse
 
 The application collector can send OTLP traces to Langfuse as well as Tempo. Use an existing Langfuse instance or start the self-hosted Compose services below. Langfuse API keys are created per project in its UI; the kit does not create them.
