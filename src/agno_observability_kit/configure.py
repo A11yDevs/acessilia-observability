@@ -24,9 +24,9 @@ def write_config(config: ProjectConfig = CONFIG, root: Path = ROOT) -> None:
     collector.mkdir(parents=True, exist_ok=True)
     performance_tests = root / "infra/performance-tests"
     performance_tests.mkdir(parents=True, exist_ok=True)
-    log_dir = Path(config.collector_log_dir) if config.collector_log_dir else collector / "logs"
+    log_dir = config.collector_log_dir or "./logs"
     if not config.collector_log_dir:
-        log_dir.mkdir(exist_ok=True)
+        (collector / "logs").mkdir(exist_ok=True)
     (server_dir / ".runtime.env").write_text(
         f"OBSERVABILITY_BIND_IP={config.observability_bind_ip}\n"
         f"LANGFUSE_BIND_IP={config.langfuse_bind_ip}\n"
@@ -36,7 +36,7 @@ def write_config(config: ProjectConfig = CONFIG, root: Path = ROOT) -> None:
         f"LANGFUSE_MEDIA_URL={_quoted(config.langfuse_media_url)}\n"
     )
     (collector / ".runtime.env").write_text(
-        f"COLLECTOR_LOG_DIR={_quoted(str(log_dir))}\nCOLLECTOR_BIND_IP={config.collector_bind_ip}\n"
+        f"COLLECTOR_LOG_DIR={_quoted(log_dir)}\nCOLLECTOR_BIND_IP={config.collector_bind_ip}\n"
     )
     (collector / "generated.alloy").write_text(render_alloy(config))
     (performance_tests / ".runtime.env").write_text(f"LOCUST_TARGET_URL={_quoted(config.agentos_url)}\n")

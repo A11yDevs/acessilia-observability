@@ -48,6 +48,16 @@ class ConfigureTests(unittest.TestCase):
         self.assertIn('"x-langfuse-ingestion-version" = "4"', text)
         self.assertNotIn("pk-lf-", text)
 
+    def test_default_log_mount_does_not_embed_checkout_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            write_config(ProjectConfig(), root)
+            collector = root / "infra/application-collector"
+            runtime = (collector / ".runtime.env").read_text()
+            self.assertIn('COLLECTOR_LOG_DIR="./logs"', runtime)
+            self.assertNotIn(str(root), runtime)
+            self.assertTrue((collector / "logs").is_dir())
+
 
 if __name__ == "__main__":
     unittest.main()
