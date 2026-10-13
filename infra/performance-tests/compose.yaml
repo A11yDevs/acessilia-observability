@@ -1,0 +1,12 @@
+name: agno-observability-kit-performance-tests
+
+services:
+  locust:
+    image: locustio/locust:2.46.3
+    command: -f /mnt/locustfile.py --host ${LOCUST_TARGET_URL:?Set agentos_url in config.py}
+    ports:
+      - "127.0.0.1:8089:8089"
+    environment:
+      AGENTOS_TOKEN: ${AGENTOS_TOKEN:-}
+    volumes:
+      - ./locustfile.py:/mnt/locustfile.py:ro

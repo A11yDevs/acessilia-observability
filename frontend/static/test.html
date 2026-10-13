@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Console Agno · Observabilidade</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/test.css">
+  <script src="/static/test-console.js" type="module"></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="Painel de observabilidade"><span class="brand-mark" aria-hidden="true">O</span><span><strong id="brand-name">Observabilidade</strong><small>Painel de operação</small></span></a>
+    <nav class="product-nav" aria-label="Áreas"><a href="/">Painel</a><a class="active" href="/test" aria-current="page">Console Agno</a></nav>
+    <nav class="external-nav" aria-label="Ferramentas externas"><a id="grafana-link" target="_blank" rel="noopener noreferrer">Grafana</a><a id="langfuse-link" hidden target="_blank" rel="noopener noreferrer">Langfuse</a></nav>
+  </header>
+
+  <main class="agno-workspace">
+    <section class="console-toolbar" aria-labelledby="console-title">
+      <div><span class="section-kicker">Runtime integrado</span><h1 id="console-title">Agentes, times e workflows</h1></div>
+      <div class="command-row"><span id="connection-status" class="overall-status" role="status" aria-live="polite">Descobrindo componentes…</span><button id="reload-targets" type="button" class="button">Atualizar</button></div>
+    </section>
+
+    <section class="runtime-band" aria-label="Estado da integração">
+      <div class="runtime-item"><span class="status-dot" id="runtime-dot" aria-hidden="true"></span><span><strong>Runtime Agno</strong><small id="runtime-state">Verificando</small></span></div>
+      <div class="runtime-item"><span><strong>Projeto</strong><small id="project-name">Conectando…</small></span></div>
+      <div class="runtime-item"><span><strong>Entidades</strong><small id="entity-count">Aguardando</small></span></div>
+      <div class="runtime-item"><span><strong>Ambiente</strong><small id="environment">Carregando</small></span></div>
+    </section>
+
+    <div class="console-layout">
+      <aside class="section-surface entity-sidebar" aria-label="Entidades e sessões">
+        <div class="section-heading compact"><h2>Entidades</h2><span class="source-state" id="entity-source-state">AgentOS</span></div>
+        <label class="sr-only" for="entity-select">Agente, time ou workflow</label>
+        <select id="entity-select" class="sr-only" tabindex="-1" aria-hidden="true" disabled><option value="">Carregando componentes…</option></select>
+        <section class="entity-group"><h3>Agentes</h3><div id="agent-list" class="entity-list"><p class="empty-state">Carregando…</p></div></section>
+        <section class="entity-group"><h3>Times</h3><div id="team-list" class="entity-list"><p class="empty-state">Carregando…</p></div></section>
+        <section class="entity-group"><h3>Workflows</h3><div id="workflow-list" class="entity-list"><p class="empty-state">Carregando…</p></div></section>
+        <div class="session-section">
+          <div class="section-heading compact"><h3>Sessões</h3><button id="new-session" type="button" class="button compact" disabled>Nova</button></div>
+          <label class="sr-only" for="session-select">Conversa</label>
+          <select id="session-select" class="sr-only" tabindex="-1" aria-hidden="true" disabled><option value="">Nova conversa</option></select>
+          <div id="session-list" class="session-list"><p class="empty-state">Selecione uma entidade.</p></div>
+          <p id="session-note" class="sidebar-note">Escolha uma sessão ou inicie uma nova.</p>
+        </div>
+      </aside>
+
+      <section class="section-surface chat-surface" aria-labelledby="conversation-heading">
+        <header class="chat-heading"><div><span class="section-kicker">Conversa direta</span><h2 id="conversation-heading">Selecione uma entidade</h2><p id="target-note" class="sidebar-note">Componentes descobertos pelo AgentOS.</p></div><div class="chat-controls"><span id="session-pill" class="session-label">Sem sessão</span><button id="clear-chat" type="button" class="button compact">Limpar tela</button></div></header>
+        <div id="conversation" class="conversation" role="log" aria-label="Conversa" aria-live="polite" aria-relevant="additions text"><p class="empty-state">Selecione uma entidade para iniciar.</p></div>
+        <form id="message-form" class="message-form"><label class="sr-only" for="message">Mensagem</label><textarea id="message" rows="3" maxlength="20000" placeholder="Mensagem para a entidade selecionada" required disabled></textarea><div class="message-actions"><small>Enter para enviar · Shift+Enter para quebrar linha</small><div><button id="stop-run" type="button" class="button" hidden>Fechar stream</button><button id="send-message" type="submit" class="button primary" disabled>Enviar</button></div></div></form>
+      </section>
+
+      <aside class="section-surface run-inspector" aria-labelledby="activity-heading">
+        <div class="section-heading compact"><h2 id="activity-heading">Execução</h2><span id="run-state" class="source-state">Aguardando</span></div>
+        <label for="run-select">Execução salva</label>
+        <select id="run-select" disabled><option value="">Nenhuma execução salva</option></select>
+        <div class="section-heading subsection compact"><h3>Resultado</h3></div>
+        <p id="result-note" class="sidebar-note">Nenhuma execução ainda.</p>
+        <dl id="run-details" class="run-details"></dl>
+        <div class="section-heading subsection compact"><h3>Eventos</h3></div>
+        <ol id="event-timeline" class="event-timeline" aria-label="Eventos da execução"><li class="empty-state">Eventos aparecerão durante a execução.</li></ol>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

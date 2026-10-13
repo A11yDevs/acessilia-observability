@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Observabilidade</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/dashboard.css">
+  <script src="/static/app.js" type="module"></script>
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="Painel de observabilidade">
+      <span class="brand-mark" aria-hidden="true">O</span>
+      <span><strong id="brand-name">Observabilidade</strong><small>Painel de operação</small></span>
+    </a>
+    <nav class="product-nav" aria-label="Áreas"><a class="active" href="/" aria-current="page">Painel</a><a href="/test">Console Agno</a></nav>
+    <nav class="external-nav" aria-label="Ferramentas externas"><a id="grafana-link" target="_blank" rel="noopener noreferrer">Grafana</a><a id="langfuse-link" hidden target="_blank" rel="noopener noreferrer">Langfuse</a></nav>
+  </header>
+  <div class="connection-notice" id="notice" role="alert" hidden></div>
+
+  <main class="workspace">
+    <section class="workspace-toolbar" aria-labelledby="workspace-title">
+      <div><span class="section-kicker" id="environment">Carregando ambiente</span><h1 id="workspace-title">Operação</h1><p class="project-caption" id="project-id"></p></div>
+      <div class="toolbar-controls">
+        <span class="overall-status" id="overall-status">Verificando serviços</span>
+        <label class="range-control" for="time-range">Período <select id="time-range"><option value="1">1 h</option><option value="6">6 h</option><option value="24">24 h</option></select></label>
+        <label class="toggle-control"><input id="auto-refresh" type="checkbox" checked><span aria-hidden="true"></span>Atualização automática</label>
+        <button class="button" id="refresh" type="button">Atualizar</button>
+        <time class="updated-at" id="updated-at">Carregando…</time>
+      </div>
+    </section>
+
+    <section class="service-band" id="service-band" aria-label="Status dos serviços"><span class="empty-state">Verificando serviços…</span></section>
+
+    <div class="workspace-tabs" role="tablist" aria-label="Áreas de investigação">
+      <button class="active" type="button" role="tab" id="tab-overview" aria-controls="overview" aria-selected="true" data-tab="overview">Visão geral</button>
+      <button type="button" role="tab" id="tab-runs" aria-controls="runs-panel" aria-selected="false" data-tab="runs-panel">Execuções</button>
+      <button type="button" role="tab" id="tab-agno" aria-controls="agno-panel" aria-selected="false" data-tab="agno-panel">Agno</button>
+      <button type="button" role="tab" id="tab-metrics" aria-controls="metrics-panel" aria-selected="false" data-tab="metrics-panel">Métricas</button>
+      <button type="button" role="tab" id="tab-logs" aria-controls="logs-panel" aria-selected="false" data-tab="logs-panel">Logs</button>
+      <button type="button" role="tab" id="tab-sources" aria-controls="sources-panel" aria-selected="false" data-tab="sources-panel">Fontes</button>
+    </div>
+
+    <section class="workspace-panel active" id="overview" role="tabpanel" aria-labelledby="tab-overview">
+      <div class="section-heading"><div><span class="section-kicker">Agora</span><h2>Indicadores principais</h2></div><span class="source-state" id="realtime-updated">Carregando métricas</span></div>
+      <div class="overview-kpis" id="overview-kpis"></div>
+      <div class="section-heading subsection"><div><span class="section-kicker">Prometheus</span><h2>Histórico de execuções</h2></div></div>
+      <div id="history" class="history-grid" aria-live="polite"><p class="empty-state">Carregando histórico…</p></div>
+      <div class="overview-lower">
+        <section class="section-surface"><div class="section-heading compact"><h3>Runtime Agno</h3><a href="/test">Abrir console</a></div><p id="overview-agno" class="muted">Verificando componentes…</p></section>
+        <section class="section-surface"><div class="section-heading compact"><h3>Sessões recentes</h3></div><div id="overview-sessions" class="sessions-summary">Carregando sessões…</div></section>
+      </div>
+    </section>
+
+    <section class="workspace-panel" id="runs-panel" role="tabpanel" aria-labelledby="tab-runs" hidden>
+      <div class="section-heading"><div><span class="section-kicker">AgentOS</span><h2>Execuções e sessões</h2></div><label for="session-type">Tipo <select id="session-type"><option value="agent">Agentes</option><option value="team">Times</option><option value="workflow">Workflows</option></select></label></div>
+      <div class="investigation-layout">
+        <section class="section-surface"><div class="section-heading compact"><h3>Sessões</h3></div><div id="sessions" class="sessions-list" aria-live="polite">Carregando sessões…</div></section>
+        <section class="section-surface"><div class="section-heading compact"><h3>Execuções da sessão</h3></div><div id="runs" class="runs-list" aria-live="polite"><p class="empty-state">Selecione uma sessão.</p></div></section>
+      </div>
+    </section>
+
+    <section class="workspace-panel" id="agno-panel" role="tabpanel" aria-labelledby="tab-agno" hidden>
+      <div class="section-heading"><div><span class="section-kicker">Runtime remoto</span><h2>Agentes, times e workflows</h2></div><a class="button primary" href="/test">Abrir console Agno</a></div>
+      <section class="section-surface"><div class="section-heading compact"><span id="agentos-status" class="source-state">Verificando</span><p id="agentos-meta" class="muted">Descobrindo componentes.</p></div><div id="entities" class="entities-grid"></div></section>
+    </section>
+
+    <section class="workspace-panel" id="metrics-panel" role="tabpanel" aria-labelledby="tab-metrics" hidden>
+      <div class="section-heading"><div><span class="section-kicker">Prometheus</span><h2>Métricas atuais</h2></div></div>
+      <section class="section-surface"><div id="metrics" class="metrics-list">Carregando métricas…</div></section>
+    </section>
+
+    <section class="workspace-panel" id="logs-panel" role="tabpanel" aria-labelledby="tab-logs" hidden>
+      <div class="section-heading"><div><span class="section-kicker">Loki</span><h2>Logs</h2></div></div>
+      <section class="section-surface">
+        <form id="log-filters" class="filter-bar"><label for="log-text">Texto <input id="log-text" type="search" maxlength="200" placeholder="Buscar mensagem"></label><label for="log-level">Nível <select id="log-level"><option value="">Todos</option><option value="error">Erro</option><option value="warn">Aviso</option><option value="info">Info</option><option value="debug">Debug</option></select></label><button class="button" type="submit">Buscar</button></form>
+        <div id="logs" class="log-list" aria-live="polite">Carregando logs…</div>
+      </section>
+    </section>
+
+    <section class="workspace-panel" id="sources-panel" role="tabpanel" aria-labelledby="tab-sources" hidden>
+      <div class="section-heading"><div><span class="section-kicker">Coleta</span><h2>Estado das fontes</h2></div></div>
+      <section class="section-surface"><div id="source-status" class="sources-grid" aria-live="polite">Verificando fontes…</div></section>
+    </section>
+  </main>
+</body>
+</html>
