@@ -7,24 +7,25 @@
   <title>Observabilidade</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/dashboard.css">
+  <link rel="stylesheet" href="/static/central.css">
   <script src="/static/app.js" type="module"></script>
 </head>
 <body>
   <header class="app-header">
     <a class="brand" href="/" aria-label="Painel de observabilidade">
-      <span class="brand-mark" aria-hidden="true">O</span>
-      <span><strong id="brand-name">Observabilidade</strong><small>Painel de operação</small></span>
+      <span class="brand-mark" aria-hidden="true">A</span>
+      <span><strong id="brand-name">Acessília</strong><small>Central de observabilidade</small></span>
     </a>
-    <nav class="product-nav" aria-label="Áreas"><a class="active" href="/" aria-current="page">Painel</a><a href="/test">Console Agno</a></nav>
+    <nav class="product-nav" aria-label="Áreas"><a class="active" href="/" aria-current="page">Operação</a><a id="console-link" href="/test" hidden>Console Agno</a><a href="/docs/integration">Guia de integração</a></nav>
     <nav class="external-nav" aria-label="Ferramentas externas"><a id="grafana-link" target="_blank" rel="noopener noreferrer">Grafana</a><a id="langfuse-link" hidden target="_blank" rel="noopener noreferrer">Langfuse</a></nav>
   </header>
   <div class="connection-notice" id="notice" role="alert" hidden></div>
 
   <main class="workspace">
     <section class="workspace-toolbar" aria-labelledby="workspace-title">
-      <div><span class="section-kicker" id="environment">Carregando ambiente</span><h1 id="workspace-title">Operação</h1><p class="project-caption" id="project-id"></p></div>
+      <div><span class="section-kicker" id="environment">Carregando ambiente</span><h1 id="workspace-title">Central de operações</h1><p class="project-caption" id="project-id"></p></div>
       <div class="toolbar-controls">
-        <span class="overall-status" id="overall-status">Verificando serviços</span>
+        <span class="overall-status" id="central-overall-status">Verificando coleta</span>
         <label class="range-control" for="time-range">Período <select id="time-range"><option value="1">1 h</option><option value="6">6 h</option><option value="24">24 h</option></select></label>
         <label class="toggle-control"><input id="auto-refresh" type="checkbox" checked><span aria-hidden="true"></span>Atualização automática</label>
         <button class="button" id="refresh" type="button">Atualizar</button>
@@ -32,6 +33,35 @@
       </div>
     </section>
 
+    <section id="login-panel" class="section-surface" hidden aria-labelledby="login-title">
+      <h2 id="login-title">Acesso à central</h2><form id="login-form" class="filter-bar"><label for="view-token">Token de visualização <input id="view-token" type="password" autocomplete="current-password" required></label><button class="button primary" type="submit">Entrar</button><span id="login-result" role="status"></span></form>
+    </section>
+
+    <section class="central-section" aria-labelledby="machine-title">
+      <div class="section-heading"><div><span class="section-kicker">Máquina monitorada</span><h2 id="machine-title">O que está rodando agora</h2></div><label for="host-select">Máquina <select id="host-select"><option value="">Nenhuma conectada</option></select></label></div>
+      <p id="host-state" class="muted" role="status">Aguardando a primeira amostra do coletor da máquina.</p>
+      <div id="host-kpis" class="host-kpis"></div>
+      <section class="section-surface"><div class="section-heading compact"><h3>Processos</h3><label for="process-filter">Filtrar <input id="process-filter" type="search" placeholder="Nome ou PID" maxlength="80"></label></div>
+        <p class="muted">Processos visíveis ao coletor, até 200 por amostra. Argumentos, variáveis de ambiente e arquivos não são coletados.</p>
+        <div class="table-scroll"><table class="process-table"><caption class="sr-only">Processos da máquina selecionada</caption><thead><tr><th scope="col">Processo / serviço</th><th scope="col">PID</th><th scope="col">Estado</th><th scope="col">CPU</th><th scope="col">Memória</th><th scope="col">Tempo ativo</th></tr></thead><tbody id="process-rows"><tr><td colspan="6">Nenhuma máquina conectada. Execute o host agent na máquina que deseja monitorar.</td></tr></tbody></table></div>
+      </section>
+    </section>
+
+    <section class="central-section" aria-labelledby="flow-title">
+      <div class="section-heading"><div><span class="section-kicker">Acessília → Toolbox → Resultado</span><h2 id="flow-title">Jobs e fluxo de decisões</h2></div><span id="telemetry-state" class="source-state" role="status">Verificando coleta</span></div>
+      <div id="job-kpis" class="host-kpis"></div>
+      <div id="cost-kpis" class="host-kpis" aria-label="Indicadores no período de retenção"></div>
+      <form id="job-filters" class="filter-bar section-surface"><label for="job-query">Job <input id="job-query" type="search" placeholder="Identificador do job" maxlength="128"></label><label for="job-status">Estado <select id="job-status"><option value="">Todos</option><option value="queued">Na fila</option><option value="running">Em execução</option><option value="retrying">Tentando novamente</option><option value="failed">Falhou</option><option value="succeeded">Concluído</option><option value="cancelled">Cancelado</option></select></label><label for="job-service">Serviço <select id="job-service"><option value="">Todos</option><option value="acessilia">Acessília</option><option value="acessilia-toolbox">Toolbox</option></select></label><button type="submit" class="button">Filtrar</button></form>
+      <div class="flow-layout">
+        <section class="section-surface"><div class="section-heading compact"><h3>Jobs recentes</h3><span id="job-count" class="muted"></span></div><div id="central-jobs" class="central-jobs">Carregando jobs…</div><button id="more-jobs" class="button" type="button" hidden>Carregar mais jobs</button></section>
+        <section class="section-surface flow-detail" aria-labelledby="selected-job-title"><div class="section-heading compact"><h3 id="selected-job-title" tabindex="-1">Selecione um job</h3><button id="export-events" type="button" class="button" hidden>Exportar eventos carregados</button></div><p id="job-correlation" class="muted"></p><p id="flow-coverage" class="coverage-note">A linha do tempo exibe decisões e operações registradas pela aplicação. Etapas sem instrumentação não são inferidas.</p><div id="pipeline-stages" class="pipeline-stages" aria-label="Cobertura das etapas"></div><div id="decision-timeline" class="decision-timeline"><p class="empty-state">Selecione um job para acompanhar cada etapa, escolha de provider, fallback e validação.</p></div><button id="more-events" type="button" class="button" hidden>Carregar mais eventos</button></section>
+      </div>
+    </section>
+
+    <section class="central-section" aria-labelledby="integration-title"><div class="section-heading"><div><span class="section-kicker">Conexões independentes</span><h2 id="integration-title">Acessília e Toolbox</h2></div><a href="/docs/integration">O que configurar nos projetos</a></div><div id="ecosystem-services" class="ecosystem-services">Verificando APIs…</div></section>
+
+    <details class="advanced-monitoring"><summary>Métricas, logs e runtime Agno</summary>
+    <span class="overall-status" id="overall-status">Verificando serviços de investigação</span>
     <section class="service-band" id="service-band" aria-label="Status dos serviços"><span class="empty-state">Verificando serviços…</span></section>
 
     <div class="workspace-tabs" role="tablist" aria-label="Áreas de investigação">
@@ -84,6 +114,7 @@
       <div class="section-heading"><div><span class="section-kicker">Coleta</span><h2>Estado das fontes</h2></div></div>
       <section class="section-surface"><div id="source-status" class="sources-grid" aria-live="polite">Verificando fontes…</div></section>
     </section>
+    </details>
   </main>
 </body>
 </html>

@@ -74,7 +74,7 @@ class RunConsoleTests(unittest.TestCase):
         self.assertNotIn(b"unexpected", output)
 
     def test_endpoint_requires_agentos_and_validates_request(self):
-        app = create_app(ProjectConfig())
+        app = create_app(ProjectConfig(enable_test_console=True))
 
         async def call(payload):
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
@@ -89,7 +89,7 @@ class RunConsoleTests(unittest.TestCase):
         async def fake_stream(*args, **kwargs):
             yield b'event: RunCompleted\ndata: {"content":"Done"}\n\n'
 
-        app = create_app(ProjectConfig(agentos_url="http://agent.test"))
+        app = create_app(ProjectConfig(agentos_url="http://agent.test", enable_test_console=True))
 
         async def call():
             with patch("frontend.test_console.stream_run", fake_stream):

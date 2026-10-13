@@ -4,7 +4,9 @@ WORKDIR /app
 COPY pyproject.toml config.py ./
 COPY src ./src
 COPY frontend ./frontend
-RUN pip install --no-cache-dir . && useradd --system --uid 10001 --no-create-home kit
+COPY docs ./docs
+RUN pip install --no-cache-dir . && useradd --system --uid 10001 --no-create-home kit \
+    && mkdir -p /app/var && chown kit /app/var
 
 USER kit
 EXPOSE 8010

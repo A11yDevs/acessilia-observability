@@ -67,7 +67,7 @@ def configure_agno_telemetry(
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
         from opentelemetry.trace import ProxyTracerProvider, StatusCode
     except ImportError as exc:
-        raise RuntimeError("Install the optional telemetry dependencies with: pip install 'agno-observability-kit[telemetry]'") from exc
+        raise RuntimeError("Install the optional telemetry dependencies with: pip install 'acessilia-observability[telemetry]'") from exc
 
     if not isinstance(trace.get_tracer_provider(), ProxyTracerProvider):
         raise RuntimeError("A tracer provider already exists. Configure its OTLP exporter and AgnoInstrumentor directly instead.")

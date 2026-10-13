@@ -3,14 +3,22 @@
 Credentials belong in .env, not here. Run `python -m agno_observability_kit.configure` after edits.
 """
 
+import os
+
 from agno_observability_kit.settings import ProjectConfig
 
 
 CONFIG = ProjectConfig(
-    project_id="example",
-    project_name="Example project",
-    environment="local",
-    agentos_url="",  # Example: http://100.64.0.10:7777
+    project_id="acessilia",
+    project_name="Acessília · Central de observabilidade",
+    environment=os.getenv("OBS_ENVIRONMENT", "develop"),
+    acessilia_url=os.getenv("ACESSILIA_API_URL", ""),  # Base URL, without /api/v1.
+    toolbox_url=os.getenv("TOOLBOX_API_URL", ""),  # Base URL, without /v1.
+    agentos_url=os.getenv("AGENTOS_URL", ""),  # Optional showcase, separate from jobs.
+    telemetry_db=os.getenv("OBS_DB_PATH", "var/observability.sqlite3"),
+    retention_days=int(os.getenv("OBS_RETENTION_DAYS", "7")),
+    max_events=int(os.getenv("OBS_MAX_EVENTS", "100000")),
+    enable_test_console=os.getenv("OBS_ENABLE_TEST_CONSOLE", "false").lower() == "true",
     observability_bind_ip="127.0.0.1",  # Use a private network address for remote ingestion.
     observability_ingest_url="http://host.docker.internal",  # Address reachable from the application collector.
     collector_bind_ip="127.0.0.1",  # Change only if another container must reach collector OTLP.

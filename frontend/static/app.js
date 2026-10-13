@@ -1,4 +1,5 @@
 import { renderHistory } from './charts.js';
+import { refreshCentral } from './central.js';
 
 const $ = (id) => document.getElementById(id);
 const labels = { agentos: 'Runtime Agno', prometheus: 'Prometheus', collector: 'Alloy', loki: 'Loki', tempo: 'Tempo', langfuse: 'Langfuse' };
@@ -64,7 +65,7 @@ async function loadConfig() {
   $('grafana-link').href = `${config.grafana_ui_url.replace(/\/$/, '')}/d/agno-observability/agno-observability`;
   $('langfuse-link').hidden = !config.langfuse_ui_url;
   if (config.langfuse_ui_url) $('langfuse-link').href = config.langfuse_ui_url;
-  if (!config.configured) setNotice('Configure agentos_url em config.py para conectar uma instância AgentOS.');
+  $('console-link').hidden = !config.test_console_enabled;
 }
 
 function sourceClass(source) {
@@ -291,11 +292,18 @@ function activateTab(id) {
 async function refresh() {
   setNotice('');
   try { await loadConfig(); } catch (error) { setNotice(error.message); }
-  await Promise.all([loadStatus(), loadEntities(), loadMetrics(), loadHistory(), loadSessions(), loadLogs()]);
+  await refreshCentral();
+  if (document.querySelector('.advanced-monitoring').open) {
+    await Promise.all([loadStatus(), loadEntities(), loadMetrics(), loadHistory(), loadSessions(), loadLogs()]);
+  }
   $('updated-at').textContent = new Date().toLocaleTimeString('pt-BR');
 }
 
 $('refresh').addEventListener('click', refresh);
+window.addEventListener('observation-authenticated',refresh);
+document.querySelector('.advanced-monitoring').addEventListener('toggle', () => {
+  if (document.querySelector('.advanced-monitoring').open) refresh();
+});
 $('session-type').addEventListener('change', loadSessions);
 $('time-range').addEventListener('change', () => Promise.all([loadHistory(), loadLogs()]));
 $('log-filters').addEventListener('submit', (event) => { event.preventDefault(); loadLogs(); });
@@ -311,7 +319,8 @@ document.querySelectorAll('.workspace-tabs [role="tab"]').forEach((button, index
 });
 setInterval(() => {
   if ($('auto-refresh').checked && !document.hidden) {
-    Promise.all([loadStatus(), loadMetrics(), loadHistory(), loadLogs()]);
+    refreshCentral();
+    if (document.querySelector('.advanced-monitoring').open) Promise.all([loadStatus(), loadMetrics(), loadHistory(), loadLogs()]);
     $('updated-at').textContent = new Date().toLocaleTimeString('pt-BR');
   }
 }, 30_000);

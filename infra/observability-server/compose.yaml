@@ -1,4 +1,4 @@
-name: agno-observability-kit
+name: acessilia-observability
 
 services:
   panel:
@@ -9,6 +9,29 @@ services:
       - "127.0.0.1:8010:8010"
     environment:
       AGENTOS_TOKEN: ${AGENTOS_TOKEN:-}
+      OBS_VIEW_TOKEN: ${OBS_VIEW_TOKEN:?Set a separate viewer token in .env}
+      OBS_INGEST_TOKEN: ${OBS_INGEST_TOKEN:?Set an event ingestion token in .env}
+      OBS_HOST_TOKEN: ${OBS_HOST_TOKEN:?Set a separate host ingestion token in .env}
+      ACESSILIA_API_URL: ${ACESSILIA_API_URL:-}
+      ACESSILIA_OBSERVABILITY_TOKEN: ${ACESSILIA_OBSERVABILITY_TOKEN:-}
+      TOOLBOX_API_URL: ${TOOLBOX_API_URL:-}
+      TOOLBOX_API_KEY: ${TOOLBOX_API_KEY:-}
+      AGENTOS_URL: ${AGENTOS_URL:-}
+      OBS_ENVIRONMENT: ${OBS_ENVIRONMENT:-develop}
+      OBS_RETENTION_DAYS: ${OBS_RETENTION_DAYS:-7}
+      OBS_MAX_EVENTS: ${OBS_MAX_EVENTS:-100000}
+      OBS_ENABLE_TEST_CONSOLE: ${OBS_ENABLE_TEST_CONSOLE:-false}
+      OBS_DB_PATH: /app/var/observability.sqlite3
+    volumes:
+      - observation-data:/app/var
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
     depends_on:
       - prometheus
       - loki
@@ -64,6 +87,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  observation-data:
   prometheus-data:
   loki-data:
   tempo-data:
