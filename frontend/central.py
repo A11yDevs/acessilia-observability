@@ -126,11 +126,11 @@ def central_routes(config, store):
     @router.get('/api/integration')
     def integration():
         return {
-            'revisions':{'acessilia':'331e55935e89dda8fa33a684f69f0a45efeacf48','acessilia-toolbox':'64318eaeb9b358b5ea06137b85c2fdc310be66e1'},
-            'phases':['intake','queue','cache','manifest','media_inspect','enrichment','planning','execution','validation','export','delivery'],
+            'revisions':{'acessilia':'aebf600fa7a05d780b6d922f2450ded54a10fd40','acessilia-toolbox':'3e0fc2ecfac1ac7711220c148fccef7ea2950341'},
+            'phases':['intake','queue','cache','manifest','media_inspect','enrichment','planning','execution','validation','export','delivery','model','tool'],
             'guide':'/docs/integration',
             'coverage':'Eventos explícitos e decisões operacionais emitidas. Etapas não instrumentadas não são inferidas.',
-            'pipeline_notes':['AgentOS é um showcase separado do pipeline.','A develop contém handlers no-op e execução dry-run; registre dry_run e noop.','Não existe listagem global de jobs na API atual; publique eventos no worker.'],
+            'pipeline_notes':['AgentOS é um showcase separado do pipeline.','O executor roda em dry-run (passos simulados) e no modo real; registre dry_run, status do passo e replanejamentos.','Não existe listagem global de jobs na API atual; publique eventos no worker.'],
         }
 
     return router

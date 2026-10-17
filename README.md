@@ -10,7 +10,7 @@ Central de operação para **Acessília + Acessília Toolbox**: processos da má
 - SQLite persistente, ingestão idempotente, limite de eventos e retenção; tokens distintos para leitura, eventos e máquina.
 - Prometheus, Loki, Tempo, Grafana e Langfuse opcional preservados como ferramentas de investigação complementar.
 
-**A central está pronta para receber dados. É necessário instrumentar as aplicações e executar o host agent na máquina monitorada.** URLs vazias mostram “não configurado”; nenhum job ou processo fictício é inserido automaticamente. O AgentOS atual é um showcase de VisionAgent/DataAgent, separado do pipeline real. Algumas etapas da `develop` são dry-run/no-op; a interface mantém essa distinção.
+**A central está pronta para receber dados. É necessário instrumentar as aplicações e executar o host agent na máquina monitorada.** URLs vazias mostram “não configurado”; nenhum job ou processo fictício é inserido automaticamente. O AgentOS atual é um showcase de VisionAgent/DataAgent, separado do pipeline real. O executor PDDL roda em modo simulado quando `PDDL_EXECUTE_DRY_RUN=true`; a interface deve distinguir simulação de efeito real.
 
 ## Executar localmente
 
