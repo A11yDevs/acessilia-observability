@@ -28,6 +28,13 @@ class ProjectConfig:
     langfuse_media_url: str = "http://localhost:9092"
     grafana_ui_url: str = "http://localhost:3000"
     metric_queries: dict[str, str] = field(default_factory=dict)
+    acessilia_url: str = ""
+    toolbox_url: str = ""
+    telemetry_db: str = "var/observability.sqlite3"
+    retention_days: int = 7
+    max_events: int = 100_000
+    host_stale_seconds: int = 90
+    enable_test_console: bool = False
 
     def __post_init__(self) -> None:
         for label, value in (("project_id", self.project_id), ("environment", self.environment)):
@@ -42,11 +49,22 @@ class ProjectConfig:
             ("langfuse_ui_url", self.langfuse_ui_url),
             ("langfuse_media_url", self.langfuse_media_url),
             ("grafana_ui_url", self.grafana_ui_url),
+            ("acessilia_url", self.acessilia_url),
+            ("toolbox_url", self.toolbox_url),
         ):
             if value and (urlparse(value).scheme not in {"http", "https"} or not urlparse(value).netloc):
                 raise ValueError(f"{label} must be an HTTP(S) URL")
             if value and (urlparse(value).username or urlparse(value).password):
                 raise ValueError(f"{label} cannot contain credentials")
+            if value and (urlparse(value).query or urlparse(value).fragment):
+                raise ValueError(f"{label} cannot contain a query or fragment")
+        for label, value, low, high in (
+            ("retention_days", self.retention_days, 1, 90),
+            ("max_events", self.max_events, 100, 1_000_000),
+            ("host_stale_seconds", self.host_stale_seconds, 30, 3600),
+        ):
+            if type(value) is not int or not low <= value <= high:
+                raise ValueError(f"{label} must be between {low} and {high}")
         if self.langfuse_otlp_url:
             langfuse = urlparse(self.langfuse_otlp_url)
             if langfuse.path.rstrip("/") != "/api/public/otel" or langfuse.query or langfuse.fragment:

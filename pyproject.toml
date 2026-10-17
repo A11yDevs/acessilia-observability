@@ -3,9 +3,9 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agno-observability-kit"
+name = "acessilia-observability"
 version = "0.1.0"
-description = "Standalone observability server for Agno AgentOS applications"
+description = "Correlated job, decision and host observability for Acessilia and Acessilia Toolbox"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115,<1",
@@ -14,6 +14,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+host = ["psutil>=6,<8"]
 telemetry = [
   "agno>=3",
   "openinference-instrumentation-agno",
@@ -24,3 +25,7 @@ telemetry = [
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["agno_observability_kit*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

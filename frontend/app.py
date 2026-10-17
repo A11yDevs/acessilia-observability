@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import asyncio
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Literal
 
@@ -8,6 +10,8 @@ import httpx
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from config import CONFIG
 from agno_observability_kit.integrations.agno import AgnoClient, UpstreamError
@@ -16,15 +20,57 @@ from agno_observability_kit.integrations.prometheus import query_history, query_
 from agno_observability_kit.settings import ProjectConfig
 from agno_observability_kit.status import source_status
 from frontend.test_console import test_console_routes
+from frontend.central import BodyLimit, central_routes, token_equal
+from agno_observability_kit.store import EventStore
 
 
 STATIC = Path(__file__).parent / "static"
 
 
-def create_app(config: ProjectConfig = CONFIG) -> FastAPI:
-    app = FastAPI(title=f"{config.project_name} Observability")
+def create_app(config: ProjectConfig = CONFIG, store: EventStore | None = None) -> FastAPI:
+    store = store or EventStore(config.telemetry_db, config.retention_days, config.max_events)
+    @asynccontextmanager
+    async def lifespan(app):
+        async def maintenance():
+            while True:
+                await asyncio.to_thread(store.prune)
+                await asyncio.sleep(60)
+        task = asyncio.create_task(maintenance())
+        yield
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+    app = FastAPI(title=f"{config.project_name} Observability", lifespan=lifespan)
+    app.state.store = store
+    app.add_middleware(BodyLimit)
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
-    app.include_router(test_console_routes(config, lambda: os.getenv("AGENTOS_TOKEN", "")))
+    app.include_router(central_routes(config, store))
+    if config.enable_test_console:
+        app.include_router(test_console_routes(config, lambda: os.getenv("AGENTOS_TOKEN", "")))
+
+    @app.middleware("http")
+    async def viewer_auth(request, call_next):
+        token = os.getenv('OBS_VIEW_TOKEN', '')
+        path = request.url.path
+        protected = path.startswith('/api/') and not path.startswith('/api/ingest/') and path not in {'/api/auth/login','/api/auth/logout'}
+        if token and protected:
+            supplied = request.headers.get('authorization', '')
+            cookie = request.cookies.get('obs_session', '')
+            if not (token_equal(supplied, f'Bearer {token}') or token_equal(cookie, token)):
+                return JSONResponse({'detail':'Autenticação necessária.'}, status_code=401)
+        response = await call_next(request)
+        if path.startswith('/api/'):
+            response.headers['Cache-Control'] = 'no-store'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        return response
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(request, exc):
+        # Validation responses must not echo rejected credentials or document payloads.
+        return JSONResponse(status_code=422, content={'detail':'Evento ou parâmetro inválido.',
+            'errors':[{'loc':list(error['loc']), 'type':error['type']} for error in exc.errors()]})
 
     def agno() -> AgnoClient:
         if not config.agentos_url:
@@ -48,6 +94,10 @@ def create_app(config: ProjectConfig = CONFIG) -> FastAPI:
     async def test_console():
         return FileResponse(STATIC / "test.html")
 
+    @app.get('/docs/integration', include_in_schema=False)
+    def integration_guide():
+        return FileResponse(Path(__file__).resolve().parents[1] / 'docs' / 'acessilia-integration.md', media_type='text/plain')
+
     @app.get("/api/config")
     async def public_config():
         return {
@@ -57,6 +107,7 @@ def create_app(config: ProjectConfig = CONFIG) -> FastAPI:
             "configured": bool(config.agentos_url),
             "langfuse_ui_url": config.langfuse_ui_url,
             "grafana_ui_url": config.grafana_ui_url,
+            "test_console_enabled": config.enable_test_console,
         }
 
     @app.get("/api/status")

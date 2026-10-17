@@ -6,3 +6,5 @@ infra
 tests
 __pycache__
 *.egg-info
+var
+artifacts
